@@ -3,28 +3,60 @@
 import { useState } from "react";
 
 export default function HomePage() {
+  // 🎯 STATE VARIABLES - Think of these as the app's memory
+  // "submitting" remembers if we're currently sending data to the server
+  // It starts as "false" (not submitting)
   const [submitting, setSubmitting] = useState(false);
+  
+  // "message" remembers what message to show the user
+  // It starts as "null" (no message)
   const [message, setMessage] = useState<string | null>(null);
 
+  // 📝 FORM SUBMISSION FUNCTION - This runs when the user clicks "Save & Continue"
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    // Step 1: Stop the page from refreshing (default browser behavior)
     e.preventDefault();
+    
+    // Step 2: Remember that we're now submitting (show "Submitting..." on button)
     setSubmitting(true);
+    
+    // Step 3: Clear any old messages
     setMessage(null);
+    
+    // Step 4: Get the form element (the whole form with all its fields)
     const form = e.currentTarget;
+    
+    // Step 5: Package all the form data (text fields, file uploads, etc.)
+    // FormData is like putting everything in a box to send to the server
     const data = new FormData(form);
 
+    // Step 6: Try to send the data to the server
     try {
+      // Send the data to our server's "/api/submit" endpoint
+      // "await" means "wait for the server to respond before continuing"
       const res = await fetch("/api/submit", {
-        method: "POST",
-        body: data,
+        method: "POST",  // POST means "send data to the server"
+        body: data,      // The box with all our form data
       });
+      
+      // Check if the server said "OK" or if there was an error
       if (!res.ok) throw new Error(await res.text());
+      
+      // Convert the server's response from JSON format to JavaScript
       const json = await res.json();
+      
+      // Show a success message with the submission ID
       setMessage(`Saved! Submission ID: ${json.id}`);
+      
+      // Clear all the form fields (make them empty again)
       form.reset();
+      
     } catch (err: any) {
+      // If something went wrong, show an error message
       setMessage(err?.message ?? "Failed to submit");
+      
     } finally {
+      // No matter what happened (success or error), stop showing "Submitting..."
       setSubmitting(false);
     }
   }

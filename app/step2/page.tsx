@@ -70,8 +70,9 @@ export default function Step2Page() {
       const data = await res.json();
       setExpandedCompanies(data);
       
-      // Save to localStorage for Step 3
+      // Save to localStorage for Step 3 and Step 4
       localStorage.setItem("expandedCompanies", JSON.stringify(data));
+      localStorage.setItem("selectedSubmission", JSON.stringify(selectedSubmission));
 
     } catch (err: any) {
       setError(err.message || "Failed to expand companies");

@@ -166,9 +166,9 @@ export default function Step3Page() {
               </div>
 
               <div className="mt-6 flex gap-4">
-                <button className="btn-primary">
-                  Continue to Step 4: Scrape Jobs →
-                </button>
+                <Link href="/step4" className="btn-primary">
+                  Continue to Step 4: Match Jobs & Customize CVs →
+                </Link>
                 <button
                   onClick={() => setCareersUrls([])}
                   className="px-4 py-2 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-800 transition"
