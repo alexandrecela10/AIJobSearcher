@@ -213,45 +213,75 @@ export async function POST(req: Request) {
             const titleLower = jobDetails.title.toLowerCase();
             
             // 🤖 AI-POWERED ROLE MATCHING: Use AI to check if job matches criteria
-            // This is more flexible than hardcoded keywords
-            const matchPrompt = `Does this job match the search criteria?
+            // This is more flexible than hardcoded keywords and understands similar roles
+            const matchPrompt = `You are a job matching expert. Determine if this job matches the candidate's search criteria.
 
-Job Title: ${jobDetails.title}
-Job Description (first 500 chars): ${jobDetails.bodyText.substring(0, 500)}
+JOB DETAILS:
+Title: ${jobDetails.title}
+Description: ${jobDetails.bodyText.substring(0, 800)}
 
-Search Criteria:
-- Looking for: ${criteria.roles.join(" OR ")}
-- Seniority: ${criteria.seniority || "Any"}
-- Cities: ${criteria.cities.join(", ") || "Any"}
+CANDIDATE SEARCH CRITERIA:
+- Target Roles: ${criteria.roles.join(", ")}
+- Seniority Level: ${criteria.seniority || "Any level"}
+- Preferred Cities: ${criteria.cities.join(", ") || "Any location"}
+
+MATCHING RULES:
+1. Role matching should be FLEXIBLE - consider similar/related roles
+   Examples:
+   - "Data Engineer" matches: Data Engineer, Analytics Engineer, ML Engineer, Platform Engineer
+   - "Software Engineer" matches: Software Developer, Backend Engineer, Full Stack Engineer
+   - "Product Manager" matches: Product Owner, Product Lead, Senior PM
+
+2. Seniority should be approximate:
+   - "Junior" matches: Junior, Graduate, Entry-level, Associate
+   - "Senior" matches: Senior, Lead, Staff, Principal
+   - "Any" matches all levels
+
+3. Location should be flexible:
+   - Match if city is mentioned OR if job is remote
+   - Consider "hybrid" as matching the city
 
 Return ONLY valid JSON:
-{"matches": true/false, "reason": "brief explanation"}`;
+{
+  "matches": true/false,
+  "confidence": "high/medium/low",
+  "reason": "1-2 sentence explanation"
+}`;
 
             let roleMatch = false;
+            let matchReason = "";
             try {
               const matchCompletion = await openai.chat.completions.create({
                 model: "gpt-3.5-turbo",
                 messages: [
-                  { role: "system", content: "You are a job matching expert. Return only valid JSON." },
+                  { 
+                    role: "system", 
+                    content: "You are a job matching expert who understands role similarities and career progression. Be flexible but accurate. Return only valid JSON." 
+                  },
                   { role: "user", content: matchPrompt }
                 ],
-                temperature: 0.3,
-                max_tokens: 100,
+                temperature: 0.2, // Lower temperature for more consistent matching
+                max_tokens: 150,
               });
               const matchResponse = matchCompletion.choices[0]?.message?.content?.trim();
               const matchJson = matchResponse?.match(/\{[\s\S]*\}/);
               if (matchJson) {
                 const matchData = JSON.parse(matchJson[0]);
                 roleMatch = matchData.matches;
-                console.log(`     AI match decision: ${matchData.matches} - ${matchData.reason}`);
+                matchReason = matchData.reason || "";
+                console.log(`     🤖 AI Match: ${matchData.matches ? "✅ YES" : "❌ NO"} (${matchData.confidence}) - ${matchData.reason}`);
               }
-            } catch {
+            } catch (aiError: any) {
+              console.log(`     ⚠️  AI matching failed: ${aiError.message}`);
               // Fallback to keyword matching if AI fails
               roleMatch = criteria.roles.some(role => {
                 const roleLower = role.toLowerCase();
                 return titleLower.includes(roleLower) || 
                        (bodyLower.match(new RegExp(roleLower, 'g')) || []).length >= 2;
               });
+              if (roleMatch) {
+                console.log(`     🔤 Keyword fallback: ✅ Match found`);
+              }
             }
             
             // ✅ CITY MATCHING: More flexible
