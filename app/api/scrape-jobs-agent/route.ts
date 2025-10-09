@@ -86,27 +86,70 @@ export async function POST(req: Request) {
 
         // 📸 STEP 2: Extract ALL job-related links from the page
         console.log(`  → Extracting job links...`);
+        
+        // Wait longer for JavaScript-loaded content
+        await page.waitForTimeout(2000);
+        
         const jobLinks = await page.evaluate(() => {
           const links = Array.from(document.querySelectorAll('a'));
           return links
             .map(link => ({
               text: link.innerText?.trim() || '',
               href: link.href,
-              title: link.title || ''
+              title: link.title || '',
+              ariaLabel: link.getAttribute('aria-label') || ''
             }))
             .filter(link => {
-              // Filter for job-related links
-              const combined = `${link.text} ${link.href} ${link.title}`.toLowerCase();
-              return (
-                (combined.includes('job') || 
-                 combined.includes('career') || 
-                 combined.includes('position') ||
-                 combined.includes('role') ||
-                 combined.includes('opening')) &&
-                link.href.startsWith('http') &&
-                !link.href.includes('linkedin.com') &&
-                !link.href.includes('facebook.com')
+              const url = link.href.toLowerCase();
+              const text = link.text.toLowerCase();
+              const combined = `${text} ${url} ${link.title} ${link.ariaLabel}`.toLowerCase();
+              
+              // ❌ EXCLUDE: Blog posts, social media, general pages
+              if (
+                url.includes('blog') ||
+                url.includes('linkedin.com') ||
+                url.includes('facebook.com') ||
+                url.includes('twitter.com') ||
+                url.includes('instagram.com') ||
+                url.includes('/about') ||
+                url.includes('/contact') ||
+                url.includes('/team') ||
+                url.includes('meet-')  // Exclude "meet the team" posts
+              ) {
+                return false;
+              }
+              
+              // ✅ INCLUDE: URLs that look like job postings
+              const hasJobInUrl = (
+                url.includes('/job/') ||
+                url.includes('/jobs/') ||
+                url.includes('/role/') ||
+                url.includes('/roles/') ||
+                url.includes('/position/') ||
+                url.includes('/positions/') ||
+                url.includes('/opening/') ||
+                url.includes('/openings/') ||
+                url.includes('/vacancy/') ||
+                url.includes('/vacancies/') ||
+                url.includes('/listing/') ||
+                url.includes('/listings/')
               );
+              
+              // ✅ INCLUDE: Text that looks like a job title
+              const hasJobInText = (
+                text.includes('engineer') ||
+                text.includes('developer') ||
+                text.includes('analyst') ||
+                text.includes('manager') ||
+                text.includes('designer') ||
+                text.includes('scientist') ||
+                text.includes('architect') ||
+                text.includes('lead') ||
+                text.includes('senior') ||
+                text.includes('junior')
+              );
+              
+              return (hasJobInUrl || hasJobInText) && link.href.startsWith('http');
             });
         });
 
@@ -128,7 +171,8 @@ export async function POST(req: Request) {
         // 🔍 STEP 3: Visit each job page and extract details
         const matchedJobs: JobListing[] = [];
         
-        for (const link of jobLinks.slice(0, 10)) { // Check first 10 job links
+        console.log(`  → Checking up to 20 job links...`);
+        for (const link of jobLinks.slice(0, 50)) { // Check first 20 job links
           try {
             const jobPage = await context.newPage();
             await jobPage.goto(link.href, { 
@@ -152,24 +196,42 @@ export async function POST(req: Request) {
 
             await jobPage.close();
 
-            // 🎯 STEP 4: Simple keyword matching
+            // 🎯 STEP 4: Strict keyword matching
             const bodyLower = jobDetails.bodyText.toLowerCase();
             const titleLower = jobDetails.title.toLowerCase();
             
-            // Check if job matches criteria
-            const roleMatch = criteria.roles.some(role => 
-              titleLower.includes(role.toLowerCase()) || 
-              bodyLower.includes(role.toLowerCase())
-            );
+            // ✅ STRICT ROLE MATCHING: Must match in title OR prominently in body
+            const roleMatch = criteria.roles.some(role => {
+              const roleLower = role.toLowerCase();
+              // Check if role appears in title (most important)
+              if (titleLower.includes(roleLower)) return true;
+              
+              // Check if role appears multiple times in body (indicates it's central to the job)
+              const roleCount = (bodyLower.match(new RegExp(roleLower, 'g')) || []).length;
+              return roleCount >= 2;
+            });
             
+            // ✅ CITY MATCHING: More flexible
             const cityMatch = criteria.cities.length === 0 || criteria.cities.some(city => 
-              bodyLower.includes(city.toLowerCase())
+              bodyLower.includes(city.toLowerCase()) || titleLower.includes(city.toLowerCase())
             );
             
-            const seniorityMatch = titleLower.includes(criteria.seniority.toLowerCase()) ||
+            // ✅ SENIORITY MATCHING: Optional but helpful
+            const seniorityMatch = !criteria.seniority || 
+                                  criteria.seniority === "" ||
+                                  titleLower.includes(criteria.seniority.toLowerCase()) ||
                                   bodyLower.includes(criteria.seniority.toLowerCase());
 
-            if (roleMatch && (cityMatch || seniorityMatch)) {
+            // ❌ EXCLUDE: Blog posts, team pages, non-job content
+            const isNotJob = (
+              titleLower.includes('meet') ||
+              titleLower.includes('blog') ||
+              titleLower.includes('story') ||
+              titleLower.includes('interview') ||
+              link.href.includes('blog')
+            );
+
+            if (roleMatch && cityMatch && seniorityMatch && !isNotJob) {
               // Extract location from body text
               const locationMatch = bodyLower.match(/(london|paris|new york|berlin|amsterdam|dublin|madrid|barcelona|remote)/i);
               const location = locationMatch ? locationMatch[0] : criteria.cities[0] || 'Location not specified';
@@ -181,9 +243,13 @@ export async function POST(req: Request) {
                 url: link.href
               });
 
-              console.log(`  ✅ Matched: ${jobDetails.title}`);
+              console.log(`  ✅ Matched: ${jobDetails.title} (${link.href})`);
 
               if (matchedJobs.length >= 3) break; // Stop after 3 matches
+            } else {
+              // Debug: Log why it didn't match
+              console.log(`  ⏭️  Skipped: ${jobDetails.title}`);
+              console.log(`     Role match: ${roleMatch}, City match: ${cityMatch}, Seniority match: ${seniorityMatch}, Not job: ${isNotJob}`);
             }
 
           } catch (jobError: any) {
