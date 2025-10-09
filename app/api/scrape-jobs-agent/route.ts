@@ -63,6 +63,51 @@ export async function POST(req: Request) {
 
     const results: CompanyJobResult[] = [];
 
+    // 🤖 STEP 1: Use AI to generate similar role keywords ONCE (not per job)
+    console.log(`\n🤖 Generating similar role keywords for: ${criteria.roles.join(", ")}`);
+    let expandedRoles = [...criteria.roles]; // Start with original roles
+    
+    try {
+      const roleExpansionPrompt = `You are a job search expert. Generate 3 similar/related role titles for each given role.
+
+Target Roles: ${criteria.roles.join(", ")}
+
+Rules:
+1. Only include roles that are TRULY similar (same domain, similar responsibilities)
+2. Be conservative - don't stretch too far
+3. Consider common variations and related titles
+
+Examples:
+- "Data Engineer" → ["Analytics Engineer", "Data Platform Engineer", "ML Engineer"]
+- "Software Engineer" → ["Software Developer", "Backend Engineer", "Full Stack Engineer"]
+- "Product Manager" → ["Product Owner", "Senior Product Manager", "Technical Product Manager"]
+
+Return ONLY valid JSON:
+{
+  "expandedRoles": ["original role", "similar role 1", "similar role 2", ...]
+}`;
+
+      const expansionCompletion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: "You are a job search expert. Return only valid JSON." },
+          { role: "user", content: roleExpansionPrompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 200,
+      });
+
+      const expansionResponse = expansionCompletion.choices[0]?.message?.content?.trim();
+      const expansionJson = expansionResponse?.match(/\{[\s\S]*\}/);
+      if (expansionJson) {
+        const expansionData = JSON.parse(expansionJson[0]);
+        expandedRoles = expansionData.expandedRoles || expandedRoles;
+        console.log(`✅ Expanded roles: ${expandedRoles.join(", ")}`);
+      }
+    } catch (err) {
+      console.log(`⚠️  Role expansion failed, using original roles only`);
+    }
+
     // Process each company with the agent
     for (const { company, careersUrl } of careersUrls) {
       console.log(`\n🔍 Processing ${company} at ${careersUrl}`);
@@ -208,80 +253,32 @@ export async function POST(req: Request) {
 
             await jobPage.close();
 
-            // 🎯 STEP 4: Strict keyword matching
+            // 🎯 STEP 4: STRICT KEYWORD MATCHING with AI-expanded roles
             const bodyLower = jobDetails.bodyText.toLowerCase();
             const titleLower = jobDetails.title.toLowerCase();
             
-            // 🤖 AI-POWERED ROLE MATCHING: Use AI to check if job matches criteria
-            // This is more flexible than hardcoded keywords and understands similar roles
-            const matchPrompt = `You are a job matching expert. Determine if this job matches the candidate's search criteria.
-
-JOB DETAILS:
-Title: ${jobDetails.title}
-Description: ${jobDetails.bodyText.substring(0, 800)}
-
-CANDIDATE SEARCH CRITERIA:
-- Target Roles: ${criteria.roles.join(", ")}
-- Seniority Level: ${criteria.seniority || "Any level"}
-- Preferred Cities: ${criteria.cities.join(", ") || "Any location"}
-
-MATCHING RULES:
-1. Role matching should be FLEXIBLE - consider similar/related roles
-   Examples:
-   - "Data Engineer" matches: Data Engineer, Analytics Engineer, ML Engineer, Platform Engineer
-   - "Software Engineer" matches: Software Developer, Backend Engineer, Full Stack Engineer
-   - "Product Manager" matches: Product Owner, Product Lead, Senior PM
-
-2. Seniority should be approximate:
-   - "Junior" matches: Junior, Graduate, Entry-level, Associate
-   - "Senior" matches: Senior, Lead, Staff, Principal
-   - "Any" matches all levels
-
-3. Location should be flexible:
-   - Match if city is mentioned OR if job is remote
-   - Consider "hybrid" as matching the city
-
-Return ONLY valid JSON:
-{
-  "matches": true/false,
-  "confidence": "high/medium/low",
-  "reason": "1-2 sentence explanation"
-}`;
-
-            let roleMatch = false;
-            let matchReason = "";
-            try {
-              const matchCompletion = await openai.chat.completions.create({
-                model: "gpt-3.5-turbo",
-                messages: [
-                  { 
-                    role: "system", 
-                    content: "You are a job matching expert who understands role similarities and career progression. Be flexible but accurate. Return only valid JSON." 
-                  },
-                  { role: "user", content: matchPrompt }
-                ],
-                temperature: 0.2, // Lower temperature for more consistent matching
-                max_tokens: 150,
-              });
-              const matchResponse = matchCompletion.choices[0]?.message?.content?.trim();
-              const matchJson = matchResponse?.match(/\{[\s\S]*\}/);
-              if (matchJson) {
-                const matchData = JSON.parse(matchJson[0]);
-                roleMatch = matchData.matches;
-                matchReason = matchData.reason || "";
-                console.log(`     🤖 AI Match: ${matchData.matches ? "✅ YES" : "❌ NO"} (${matchData.confidence}) - ${matchData.reason}`);
+            // ✅ STRICT ROLE MATCHING: Check if job title contains any of the expanded roles
+            const roleMatch = expandedRoles.some(role => {
+              const roleLower = role.toLowerCase();
+              
+              // Must appear in title (most reliable)
+              if (titleLower.includes(roleLower)) {
+                console.log(`     ✅ Role match: "${role}" found in title`);
+                return true;
               }
-            } catch (aiError: any) {
-              console.log(`     ⚠️  AI matching failed: ${aiError.message}`);
-              // Fallback to keyword matching if AI fails
-              roleMatch = criteria.roles.some(role => {
-                const roleLower = role.toLowerCase();
-                return titleLower.includes(roleLower) || 
-                       (bodyLower.match(new RegExp(roleLower, 'g')) || []).length >= 2;
-              });
-              if (roleMatch) {
-                console.log(`     🔤 Keyword fallback: ✅ Match found`);
+              
+              // OR appear multiple times in body (indicates it's central to the job)
+              const roleCount = (bodyLower.match(new RegExp(roleLower, 'g')) || []).length;
+              if (roleCount >= 3) {
+                console.log(`     ✅ Role match: "${role}" appears ${roleCount} times in description`);
+                return true;
               }
+              
+              return false;
+            });
+            
+            if (!roleMatch) {
+              console.log(`     ❌ No role match - looking for: ${expandedRoles.join(", ")}`);
             }
             
             // ✅ CITY MATCHING: More flexible
