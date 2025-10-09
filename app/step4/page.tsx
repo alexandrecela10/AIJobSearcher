@@ -38,16 +38,28 @@ export default function Step4Page() {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
   useEffect(() => {
-    // Load data from localStorage
+    // 🔍 DEBUGGING: Load data from localStorage
     const savedCareersUrls = localStorage.getItem("careersUrls");
     const savedSubmission = localStorage.getItem("selectedSubmission");
     
+    console.log("Step 4 - Checking localStorage:");
+    console.log("savedCareersUrls:", savedCareersUrls);
+    console.log("savedSubmission:", savedSubmission);
+    
     if (savedCareersUrls) {
-      setCareersUrls(JSON.parse(savedCareersUrls));
+      const parsed = JSON.parse(savedCareersUrls);
+      console.log("Parsed careers URLs:", parsed);
+      setCareersUrls(parsed);
     }
     
     if (savedSubmission) {
       const submission = JSON.parse(savedSubmission);
+      console.log("Parsed submission:", submission);
+      console.log("Roles:", submission.roles);
+      console.log("Cities:", submission.cities);
+      console.log("Seniority:", submission.seniority);
+      console.log("Visa:", submission.visa);
+      
       setCriteria({
         roles: submission.roles,
         seniority: submission.seniority,
@@ -55,6 +67,9 @@ export default function Step4Page() {
         visa: submission.visa
       });
       setTemplateCvPath(submission.templatePath);
+    } else {
+      console.error("❌ No selectedSubmission found in localStorage!");
+      console.log("Available localStorage keys:", Object.keys(localStorage));
     }
   }, []);
 

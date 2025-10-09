@@ -119,7 +119,22 @@ If no matching jobs are found, return {"hasMatches": false, "jobs": []}`;
           throw new Error("No response from AI");
         }
 
-        const jobsData = JSON.parse(jobsResponse);
+        // 🔧 FIX: Extract JSON from the response (AI sometimes adds extra text)
+        let jobsData;
+        try {
+          // Try to find JSON in the response by looking for { and }
+          const jsonMatch = jobsResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            jobsData = JSON.parse(jsonMatch[0]);
+          } else {
+            // If no JSON found, try parsing the whole response
+            jobsData = JSON.parse(jobsResponse);
+          }
+        } catch (parseError: any) {
+          console.error("Failed to parse jobs response:", jobsResponse);
+          console.error("Parse error:", parseError.message);
+          throw new Error(`Invalid JSON from AI: ${parseError.message}`);
+        }
 
         // Check if there are matching jobs
         if (!jobsData.hasMatches || jobsData.jobs.length === 0) {
@@ -177,7 +192,20 @@ Focus on:
             throw new Error("No CV customization response");
           }
 
-          const cvData = JSON.parse(cvResponse);
+          // 🔧 FIX: Extract JSON from CV response
+          let cvData;
+          try {
+            const jsonMatch = cvResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              cvData = JSON.parse(jsonMatch[0]);
+            } else {
+              cvData = JSON.parse(cvResponse);
+            }
+          } catch (parseError: any) {
+            console.error("Failed to parse CV response:", cvResponse);
+            console.error("Parse error:", parseError.message);
+            throw new Error(`Invalid CV JSON from AI: ${parseError.message}`);
+          }
 
           customizedJobs.push({
             job,
