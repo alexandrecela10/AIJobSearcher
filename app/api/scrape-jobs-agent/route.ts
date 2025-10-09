@@ -153,18 +153,12 @@ export async function POST(req: Request) {
                 url.includes('/listings/')
               );
               
-              // ✅ INCLUDE: Text that looks like a job title
+              // ✅ INCLUDE: Text that looks like a job title (broader matching)
               const hasJobInText = (
-                text.includes('engineer') ||
-                text.includes('developer') ||
-                text.includes('analyst') ||
-                text.includes('manager') ||
-                text.includes('designer') ||
-                text.includes('scientist') ||
-                text.includes('architect') ||
-                text.includes('lead') ||
-                text.includes('senior') ||
-                text.includes('junior')
+                text.length > 10 && // Has some text
+                text.length < 200 && // Not too long (likely a job title)
+                !text.includes('cookie') && // Not cookie notices
+                !text.includes('privacy') // Not privacy links
               );
               
               return (hasJobInUrl || hasJobInText) && link.href.startsWith('http');
@@ -189,8 +183,8 @@ export async function POST(req: Request) {
         // 🔍 STEP 3: Visit each job page and extract details
         const matchedJobs: JobListing[] = [];
         
-        console.log(`  → Checking up to 20 job links...`);
-        for (const link of jobLinks.slice(0, 50)) { // Check first 20 job links
+        console.log(`  → Checking up to 30 job links...`);
+        for (const link of jobLinks.slice(0, 30)) { // Check first 20 job links
           try {
             const jobPage = await context.newPage();
             await jobPage.goto(link.href, { 
@@ -218,16 +212,47 @@ export async function POST(req: Request) {
             const bodyLower = jobDetails.bodyText.toLowerCase();
             const titleLower = jobDetails.title.toLowerCase();
             
-            // ✅ STRICT ROLE MATCHING: Must match in title OR prominently in body
-            const roleMatch = criteria.roles.some(role => {
-              const roleLower = role.toLowerCase();
-              // Check if role appears in title (most important)
-              if (titleLower.includes(roleLower)) return true;
-              
-              // Check if role appears multiple times in body (indicates it's central to the job)
-              const roleCount = (bodyLower.match(new RegExp(roleLower, 'g')) || []).length;
-              return roleCount >= 2;
-            });
+            // 🤖 AI-POWERED ROLE MATCHING: Use AI to check if job matches criteria
+            // This is more flexible than hardcoded keywords
+            const matchPrompt = `Does this job match the search criteria?
+
+Job Title: ${jobDetails.title}
+Job Description (first 500 chars): ${jobDetails.bodyText.substring(0, 500)}
+
+Search Criteria:
+- Looking for: ${criteria.roles.join(" OR ")}
+- Seniority: ${criteria.seniority || "Any"}
+- Cities: ${criteria.cities.join(", ") || "Any"}
+
+Return ONLY valid JSON:
+{"matches": true/false, "reason": "brief explanation"}`;
+
+            let roleMatch = false;
+            try {
+              const matchCompletion = await openai.chat.completions.create({
+                model: "gpt-3.5-turbo",
+                messages: [
+                  { role: "system", content: "You are a job matching expert. Return only valid JSON." },
+                  { role: "user", content: matchPrompt }
+                ],
+                temperature: 0.3,
+                max_tokens: 100,
+              });
+              const matchResponse = matchCompletion.choices[0]?.message?.content?.trim();
+              const matchJson = matchResponse?.match(/\{[\s\S]*\}/);
+              if (matchJson) {
+                const matchData = JSON.parse(matchJson[0]);
+                roleMatch = matchData.matches;
+                console.log(`     AI match decision: ${matchData.matches} - ${matchData.reason}`);
+              }
+            } catch {
+              // Fallback to keyword matching if AI fails
+              roleMatch = criteria.roles.some(role => {
+                const roleLower = role.toLowerCase();
+                return titleLower.includes(roleLower) || 
+                       (bodyLower.match(new RegExp(roleLower, 'g')) || []).length >= 2;
+              });
+            }
             
             // ✅ CITY MATCHING: More flexible
             const cityMatch = criteria.cities.length === 0 || criteria.cities.some(city => 
@@ -293,30 +318,56 @@ export async function POST(req: Request) {
         // 🎨 STEP 5: Customize CV for each matched job using AI
         const customizedJobs = [];
         
+        // Read the actual template CV file
+        let templateCv = "Professional with experience in software development and analytics.";
+        if (body.templateCvPath) {
+          try {
+            const fs = await import('fs/promises');
+            const path = await import('path');
+            
+            // Convert relative path to absolute path
+            const absolutePath = path.join(process.cwd(), body.templateCvPath);
+            console.log(`  → Reading CV from: ${absolutePath}`);
+            
+            templateCv = await fs.readFile(absolutePath, 'utf-8');
+            console.log(`  ✅ Loaded template CV (${templateCv.length} chars)`);
+          } catch (err: any) {
+            console.log(`  ⚠️  Could not read template CV: ${err.message}`);
+            console.log(`  → Using default CV instead`);
+          }
+        }
+        
         for (const job of matchedJobs) {
           try {
-            const cvPrompt = `Create a customized CV summary for this job:
+            const cvPrompt = `You are a professional CV writer. Customize this CV for the specific job.
 
 Job Title: ${job.title}
 Company: ${company}
 Location: ${job.location}
+Job Description: ${job.description}
 
-Original CV: Professional with experience in data engineering, software development, and analytics.
+Original CV:
+${templateCv.substring(0, 2000)}
+
+Task: Modify the CV to highlight relevant experience for this role. Keep the same structure but adjust:
+1. Summary/objective to mention the specific role and company
+2. Emphasize relevant skills and experience
+3. Adjust language to match job requirements
 
 Return ONLY valid JSON:
 {
-  "customizedCv": "2-3 sentence CV summary tailored to this role",
-  "changes": ["Change 1", "Change 2", "Change 3"]
+  "customizedCv": "The full customized CV text (keep original structure, just modify content)",
+  "changes": ["List 3-5 specific changes made"]
 }`;
 
             const cvCompletion = await openai.chat.completions.create({
               model: "gpt-3.5-turbo",
               messages: [
-                { role: "system", content: "You are a CV writer. Return only valid JSON." },
+                { role: "system", content: "You are a professional CV writer. Return only valid JSON with the full customized CV." },
                 { role: "user", content: cvPrompt }
               ],
-              temperature: 0.6,
-              max_tokens: 300,
+              temperature: 0.7,
+              max_tokens: 2000, // Increased to fit full CV
             });
 
             const cvResponse = cvCompletion.choices[0]?.message?.content?.trim();
