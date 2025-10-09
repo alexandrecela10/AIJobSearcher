@@ -89,7 +89,8 @@ export default function Step4Page() {
     setProgress({ current: 0, total: careersUrls.length });
 
     try {
-      const res = await fetch("/api/scrape-jobs", {
+      // 🤖 Use the new agentic scraper that actually visits websites
+      const res = await fetch("/api/scrape-jobs-agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
