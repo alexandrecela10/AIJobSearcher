@@ -36,6 +36,7 @@ export default function Step4Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [isEditingCriteria, setIsEditingCriteria] = useState(false);
 
   useEffect(() => {
     // 🔍 DEBUGGING: Load data from localStorage
@@ -141,32 +142,97 @@ export default function Step4Page() {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Summary */}
+          {/* Editable Criteria Section */}
           <section className="card p-6">
-            <h2 className="text-xl font-semibold mb-4">Processing Summary</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-brand-400">{careersUrls.length}</div>
-                <div className="text-sm text-slate-400">Companies</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-slate-300">{criteria?.roles?.length || 0}</div>
-                <div className="text-sm text-slate-400">Target Roles</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-slate-300">{criteria?.cities?.length || 0}</div>
-                <div className="text-sm text-slate-400">Cities</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-slate-300">{criteria?.seniority || "N/A"}</div>
-                <div className="text-sm text-slate-400">Seniority</div>
-              </div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Search Criteria</h2>
+              <button
+                onClick={() => setIsEditingCriteria(!isEditingCriteria)}
+                className="text-sm text-brand-400 hover:text-brand-300"
+              >
+                {isEditingCriteria ? "✓ Done Editing" : "✏️ Edit Criteria"}
+              </button>
             </div>
+
+            {isEditingCriteria ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Target Roles (comma-separated)</label>
+                  <input
+                    type="text"
+                    value={criteria?.roles?.join(", ") || ""}
+                    onChange={(e) => setCriteria({
+                      ...criteria,
+                      roles: e.target.value.split(",").map(r => r.trim()).filter(Boolean)
+                    })}
+                    className="input"
+                    placeholder="e.g., Data Engineer, Software Engineer"
+                  />
+                </div>
+                <div>
+                  <label className="label">Seniority Level</label>
+                  <select
+                    value={criteria?.seniority || ""}
+                    onChange={(e) => setCriteria({ ...criteria, seniority: e.target.value })}
+                    className="input"
+                  >
+                    <option value="">Any</option>
+                    <option value="Junior">Junior</option>
+                    <option value="Mid-level">Mid-level</option>
+                    <option value="Senior">Senior</option>
+                    <option value="Lead">Lead</option>
+                    <option value="Principal">Principal</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Target Cities (comma-separated)</label>
+                  <input
+                    type="text"
+                    value={criteria?.cities?.join(", ") || ""}
+                    onChange={(e) => setCriteria({
+                      ...criteria,
+                      cities: e.target.value.split(",").map(c => c.trim()).filter(Boolean)
+                    })}
+                    className="input"
+                    placeholder="e.g., London, Paris, Remote"
+                  />
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="visa"
+                    checked={criteria?.visa || false}
+                    onChange={(e) => setCriteria({ ...criteria, visa: e.target.checked })}
+                    className="mr-2"
+                  />
+                  <label htmlFor="visa" className="text-sm text-slate-300">Visa sponsorship required</label>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-brand-400">{careersUrls.length}</div>
+                  <div className="text-sm text-slate-400">Companies</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-slate-300">{criteria?.roles?.length || 0}</div>
+                  <div className="text-sm text-slate-400">Target Roles</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-slate-300">{criteria?.cities?.length || 0}</div>
+                  <div className="text-sm text-slate-400">Cities</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-slate-300">{criteria?.seniority || "N/A"}</div>
+                  <div className="text-sm text-slate-400">Seniority</div>
+                </div>
+              </div>
+            )}
 
             <button
               onClick={scrapeJobs}
-              disabled={loading}
-              className="btn-primary w-full"
+              disabled={loading || !criteria}
+              className="btn-primary w-full mt-6"
             >
               {loading 
                 ? `Processing... (${progress.current}/${progress.total} companies)` 
@@ -206,6 +272,31 @@ export default function Step4Page() {
                     <div className="text-sm text-slate-300">Errors</div>
                   </div>
                 </div>
+
+                {/* No Matches Help Message */}
+                {results.filter(r => r.status === "success").length === 0 && (
+                  <div className="mt-4 p-4 rounded-lg bg-yellow-900/20 border border-yellow-500/30">
+                    <p className="text-yellow-200 font-semibold mb-2">💡 No jobs found matching your criteria</p>
+                    <p className="text-sm text-slate-300 mb-3">
+                      Try adjusting your search criteria to get more results:
+                    </p>
+                    <ul className="text-sm text-slate-400 space-y-1 mb-3">
+                      <li>• Remove or broaden the seniority level (try "Any")</li>
+                      <li>• Add more role variations (e.g., "Data Engineer, Analytics Engineer")</li>
+                      <li>• Include "Remote" in your cities list</li>
+                      <li>• Try different role keywords</li>
+                    </ul>
+                    <button
+                      onClick={() => {
+                        setIsEditingCriteria(true);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="btn-primary text-sm"
+                    >
+                      ✏️ Edit Search Criteria
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Company Results */}
