@@ -297,9 +297,27 @@ Return ONLY valid JSON:
               titleLower.includes('meet') ||
               titleLower.includes('blog') ||
               titleLower.includes('story') ||
+              titleLower.includes('stories') ||
               titleLower.includes('interview') ||
-              link.href.includes('blog')
+              titleLower.includes('article') ||
+              titleLower.includes('news') ||
+              titleLower.includes('event') ||
+              titleLower.includes('webinar') ||
+              titleLower.includes('podcast') ||
+              titleLower.includes('life at') ||
+              titleLower.includes('day in the life') ||
+              titleLower.includes('employee spotlight') ||
+              titleLower.includes('team member') ||
+              link.href.includes('/blog') ||
+              link.href.includes('/news') ||
+              link.href.includes('/stories') ||
+              link.href.includes('/meet-') ||
+              link.href.includes('/article')
             );
+
+            if (isNotJob) {
+              console.log(`     ❌ Excluded: Not a job listing (blog/story/team page)`);
+            }
 
             if (roleMatch && cityMatch && seniorityMatch && !isNotJob) {
               // Extract location from body text
