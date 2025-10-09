@@ -81,113 +81,182 @@ export async function POST(req: Request) {
           timeout: 30000 
         });
 
-        // Wait a bit for dynamic content to load
-        await page.waitForTimeout(2000);
+        // Wait for page to fully load
+        await page.waitForTimeout(3000);
 
-        // 📸 STEP 2: Extract the page content
-        const pageContent = await page.content();
-        const pageText = await page.evaluate(() => document.body.innerText);
-
-        // 🧠 STEP 3: Use AI to understand the page and find jobs
-        const analysisPrompt = `You are a web scraping agent analyzing a careers page.
-
-Page URL: ${careersUrl}
-Company: ${company}
-
-Search Criteria:
-- Roles: ${criteria.roles.join(", ")}
-- Seniority: ${criteria.seniority}
-- Cities: ${criteria.cities.join(", ")}
-
-Page content (first 3000 chars):
-${pageText.substring(0, 3000)}
-
-Task: Extract up to 3 real job listings that match the criteria.
-
-For each job, provide:
-1. Exact job title (as shown on the page)
-2. Location (as shown on the page)
-3. Brief description (2-3 sentences)
-4. The actual URL to the job posting (must be a real link from the page)
-
-Return ONLY valid JSON in this format:
-{
-  "hasMatches": true/false,
-  "jobs": [
-    {
-      "title": "Exact job title",
-      "location": "City, Country",
-      "description": "Brief description",
-      "url": "https://full-url-to-job"
-    }
-  ]
-}
-
-IMPORTANT: 
-- Only include jobs that actually exist on this page
-- URLs must be complete and clickable
-- If no matching jobs, return {"hasMatches": false, "jobs": []}`;
-
-        const completion = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: [
-            {
-              role: "system",
-              content: "You are a precise web scraping agent. You extract real job data from careers pages and return valid JSON."
-            },
-            {
-              role: "user",
-              content: analysisPrompt
-            }
-          ],
-          temperature: 0.3, // Low temperature for accuracy
-          max_tokens: 1000,
+        // 📸 STEP 2: Extract ALL job-related links from the page
+        console.log(`  → Extracting job links...`);
+        const jobLinks = await page.evaluate(() => {
+          const links = Array.from(document.querySelectorAll('a'));
+          return links
+            .map(link => ({
+              text: link.innerText?.trim() || '',
+              href: link.href,
+              title: link.title || ''
+            }))
+            .filter(link => {
+              // Filter for job-related links
+              const combined = `${link.text} ${link.href} ${link.title}`.toLowerCase();
+              return (
+                (combined.includes('job') || 
+                 combined.includes('career') || 
+                 combined.includes('position') ||
+                 combined.includes('role') ||
+                 combined.includes('opening')) &&
+                link.href.startsWith('http') &&
+                !link.href.includes('linkedin.com') &&
+                !link.href.includes('facebook.com')
+              );
+            });
         });
 
-        const response = completion.choices[0]?.message?.content?.trim();
-        if (!response) {
-          throw new Error("No response from AI");
-        }
+        console.log(`  → Found ${jobLinks.length} potential job links`);
 
-        // Parse the AI response
-        let jobsData;
-        try {
-          const jsonMatch = response.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            jobsData = JSON.parse(jsonMatch[0]);
-          } else {
-            jobsData = JSON.parse(response);
-          }
-        } catch (parseError: any) {
-          console.error("Failed to parse AI response:", response);
-          throw new Error(`Invalid JSON: ${parseError.message}`);
-        }
-
-        // Close the page
-        await page.close();
-
-        // Check if jobs were found
-        if (!jobsData.hasMatches || jobsData.jobs.length === 0) {
+        if (jobLinks.length === 0) {
+          await page.close();
+          await context.close();
           results.push({
             company,
             careersUrl,
             status: "no_matches",
-            message: `No matching jobs found for ${criteria.roles.join(", ")} at ${criteria.seniority} level`,
+            message: `No job listings found on careers page`,
             jobs: []
           });
           continue;
         }
 
-        // 🎨 STEP 4: Customize CV for each job (simplified for now)
-        const customizedJobs = jobsData.jobs.slice(0, 3).map((job: JobListing) => ({
-          job,
-          customizedCv: `Customized CV for ${job.title} at ${company}`,
-          cvChanges: [
-            `Tailored summary for ${job.title} role`,
-            `Highlighted relevant skills for ${job.location}`,
-            `Emphasized experience matching job requirements`
-          ]
-        }));
+        // 🔍 STEP 3: Visit each job page and extract details
+        const matchedJobs: JobListing[] = [];
+        
+        for (const link of jobLinks.slice(0, 10)) { // Check first 10 job links
+          try {
+            const jobPage = await context.newPage();
+            await jobPage.goto(link.href, { 
+              waitUntil: 'domcontentloaded',
+              timeout: 15000 
+            });
+            await jobPage.waitForTimeout(1000);
+
+            // Extract job details from the page
+            const jobDetails = await jobPage.evaluate(() => {
+              const bodyText = document.body.innerText;
+              const title = document.querySelector('h1')?.innerText || 
+                           document.querySelector('title')?.innerText || 
+                           'Job Position';
+              
+              return {
+                title: title.trim(),
+                bodyText: bodyText.substring(0, 2000)
+              };
+            });
+
+            await jobPage.close();
+
+            // 🎯 STEP 4: Simple keyword matching
+            const bodyLower = jobDetails.bodyText.toLowerCase();
+            const titleLower = jobDetails.title.toLowerCase();
+            
+            // Check if job matches criteria
+            const roleMatch = criteria.roles.some(role => 
+              titleLower.includes(role.toLowerCase()) || 
+              bodyLower.includes(role.toLowerCase())
+            );
+            
+            const cityMatch = criteria.cities.length === 0 || criteria.cities.some(city => 
+              bodyLower.includes(city.toLowerCase())
+            );
+            
+            const seniorityMatch = titleLower.includes(criteria.seniority.toLowerCase()) ||
+                                  bodyLower.includes(criteria.seniority.toLowerCase());
+
+            if (roleMatch && (cityMatch || seniorityMatch)) {
+              // Extract location from body text
+              const locationMatch = bodyLower.match(/(london|paris|new york|berlin|amsterdam|dublin|madrid|barcelona|remote)/i);
+              const location = locationMatch ? locationMatch[0] : criteria.cities[0] || 'Location not specified';
+
+              matchedJobs.push({
+                title: jobDetails.title,
+                location: location,
+                description: jobDetails.bodyText.substring(0, 200) + '...',
+                url: link.href
+              });
+
+              console.log(`  ✅ Matched: ${jobDetails.title}`);
+
+              if (matchedJobs.length >= 3) break; // Stop after 3 matches
+            }
+
+          } catch (jobError: any) {
+            console.log(`  ⚠️  Skipped job link: ${jobError.message}`);
+            continue;
+          }
+        }
+
+        await page.close();
+        await context.close();
+
+        if (matchedJobs.length === 0) {
+          results.push({
+            company,
+            careersUrl,
+            status: "no_matches",
+            message: `No jobs matching ${criteria.roles.join(", ")} at ${criteria.seniority} level`,
+            jobs: []
+          });
+          continue;
+        }
+
+        // 🎨 STEP 5: Customize CV for each matched job using AI
+        const customizedJobs = [];
+        
+        for (const job of matchedJobs) {
+          try {
+            const cvPrompt = `Create a customized CV summary for this job:
+
+Job Title: ${job.title}
+Company: ${company}
+Location: ${job.location}
+
+Original CV: Professional with experience in data engineering, software development, and analytics.
+
+Return ONLY valid JSON:
+{
+  "customizedCv": "2-3 sentence CV summary tailored to this role",
+  "changes": ["Change 1", "Change 2", "Change 3"]
+}`;
+
+            const cvCompletion = await openai.chat.completions.create({
+              model: "gpt-3.5-turbo",
+              messages: [
+                { role: "system", content: "You are a CV writer. Return only valid JSON." },
+                { role: "user", content: cvPrompt }
+              ],
+              temperature: 0.6,
+              max_tokens: 300,
+            });
+
+            const cvResponse = cvCompletion.choices[0]?.message?.content?.trim();
+            const jsonMatch = cvResponse?.match(/\{[\s\S]*\}/);
+            const cvData = jsonMatch ? JSON.parse(jsonMatch[0]) : {
+              customizedCv: `Experienced professional seeking ${job.title} role at ${company}`,
+              changes: ["Tailored for role", "Highlighted relevant skills", "Emphasized location fit"]
+            };
+
+            customizedJobs.push({
+              job,
+              customizedCv: cvData.customizedCv,
+              cvChanges: cvData.changes
+            });
+
+          } catch (cvError) {
+            // Fallback if CV customization fails
+            customizedJobs.push({
+              job,
+              customizedCv: `Experienced professional seeking ${job.title} role at ${company}`,
+              cvChanges: ["Tailored for role", "Highlighted relevant skills", "Emphasized location fit"]
+            });
+          }
+        }
 
         results.push({
           company,
