@@ -81,13 +81,31 @@ export async function POST(req: Request) {
           timeout: 30000 
         });
 
+        // Check if page redirected to a job board platform
+        const currentUrl = page.url();
+        if (currentUrl !== careersUrl) {
+          console.log(`  → Redirected to: ${currentUrl}`);
+        }
+
         // Wait for page to fully load
         await page.waitForTimeout(3000);
 
         // 📸 STEP 2: Extract ALL job-related links from the page
         console.log(`  → Extracting job links...`);
         
-        // Wait longer for JavaScript-loaded content
+        // 🔄 WAIT FOR JAVASCRIPT: Many careers pages load jobs dynamically
+        // This means the HTML is empty at first, then JavaScript adds the jobs
+        // We need to wait for common job listing selectors to appear
+        try {
+          await page.waitForSelector('a[href*="job"], a[href*="role"], a[href*="position"], .job, .role, .position', {
+            timeout: 5000
+          });
+          console.log(`  → Jobs loaded via JavaScript`);
+        } catch {
+          console.log(`  → No dynamic job loading detected (or timed out)`);
+        }
+        
+        // Extra wait for any animations/transitions
         await page.waitForTimeout(2000);
         
         const jobLinks = await page.evaluate(() => {
