@@ -233,24 +233,84 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
       await page.goto(careersUrl, { waitUntil: "domcontentloaded", timeout: 15000 });
       await page.waitForTimeout(2000);
 
-      // Extract job links
-      const jobLinks = await page.evaluate(() => {
+      // 🤖 SIMULATE HUMAN: Try to find and use the search box
+      console.log(`    🔍 Looking for search box...`);
+      let jobLinks = [];
+      
+      try {
+        // Try to find search input (common selectors)
+        const searchInput = await page.locator('input[type="search"], input[placeholder*="search" i], input[placeholder*="job" i], input[name*="search" i], input[id*="search" i]').first();
+        
+        if (await searchInput.count() > 0) {
+          console.log(`    ✅ Found search box, searching for: ${criteria.roles[0]}`);
+          
+          // Type the first role into search
+          await searchInput.fill(criteria.roles[0]);
+          await page.waitForTimeout(1000);
+          
+          // Try to submit (press Enter or find search button)
+          await searchInput.press('Enter');
+          await page.waitForTimeout(3000);
+          
+          console.log(`    ✅ Search submitted, extracting results...`);
+        } else {
+          console.log(`    ⚠️  No search box found, extracting job links from page...`);
+        }
+      } catch (err) {
+        console.log(`    ⚠️  Search failed, extracting job links from page...`);
+      }
+
+      // Extract job links from current page (either search results or main page)
+      jobLinks = await page.evaluate(() => {
         const links = Array.from(document.querySelectorAll('a'));
         return links
           .filter(link => {
             const url = link.href.toLowerCase();
             const text = link.innerText.toLowerCase();
             
-            if (url.includes('/blog') || url.includes('/news') || text.includes('blog')) {
+            // ❌ EXCLUDE: Navigation, blogs, news, non-job pages
+            if (url.includes('/blog') || 
+                url.includes('/news') || 
+                url.includes('/stories') ||
+                url.includes('/about') ||
+                url.includes('/company') ||
+                url.includes('/contact') ||
+                url.includes('/#') ||
+                url.includes('/apply') ||
+                url.includes('/riders') ||
+                url.includes('/restaurant') ||
+                url.includes('/business') ||
+                url.includes('/deliver') ||
+                url.includes('/gift') ||
+                url.includes('/investors') ||
+                url.includes('/press') ||
+                text.includes('skip to') ||
+                text.includes('place order') ||
+                text.includes('sign up') ||
+                text.includes('log in') ||
+                text.includes('rider') ||
+                text.includes('restaurant') ||
+                text.includes('blog')) {
               return false;
             }
             
-            const hasJobInUrl = url.includes('/job/') || url.includes('/role/') || url.includes('/position/');
-            const hasJobInText = text.length > 10 && text.length < 200;
+            // ✅ ONLY INCLUDE: URLs that clearly indicate job listings
+            const hasJobInUrl = url.includes('/job/') || 
+                               url.includes('/jobs/') ||
+                               url.includes('/role/') || 
+                               url.includes('/roles/') ||
+                               url.includes('/position/') ||
+                               url.includes('/positions/') ||
+                               url.includes('/career/') ||
+                               url.includes('/careers/') ||
+                               url.includes('/opening/') ||
+                               url.includes('/openings/') ||
+                               url.includes('/vacancy') ||
+                               url.includes('/vacancies');
             
-            return (hasJobInUrl || hasJobInText) && link.href.startsWith('http');
+            return hasJobInUrl && link.href.startsWith('http');
           })
-          .slice(0, 10)
+          .slice(0, 20)
           .map(link => ({ href: link.href, text: link.innerText.trim() }));
       });
 

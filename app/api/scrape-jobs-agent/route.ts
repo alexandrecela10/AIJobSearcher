@@ -198,15 +198,20 @@ Return ONLY valid JSON:
                 url.includes('/listings/')
               );
               
-              // ✅ INCLUDE: Text that looks like a job title (broader matching)
-              const hasJobInText = (
-                text.length > 10 && // Has some text
-                text.length < 200 && // Not too long (likely a job title)
-                !text.includes('cookie') && // Not cookie notices
-                !text.includes('privacy') // Not privacy links
-              );
+              // ❌ EXCLUDE: Common navigation and non-job text
+              if (text.includes('skip to') ||
+                  text.includes('place order') ||
+                  text.includes('sign up') ||
+                  text.includes('log in') ||
+                  text.includes('rider') ||
+                  text.includes('restaurant') ||
+                  text.includes('cookie') ||
+                  text.includes('privacy')) {
+                return false;
+              }
               
-              return (hasJobInUrl || hasJobInText) && link.href.startsWith('http');
+              // ✅ ONLY INCLUDE: URLs with job-related paths (strict)
+              return hasJobInUrl && link.href.startsWith('http');
             });
         });
 
