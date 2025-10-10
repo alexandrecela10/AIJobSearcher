@@ -32,10 +32,11 @@ export async function POST(req: Request) {
     const seniority = String(form.get("seniority") || "");
     const cities = String(form.get("cities") || "");
     const email = String(form.get("email") || "");
+    const frequency = String(form.get("frequency") || "once");
     const visa = String(form.get("visa") || "");
     const file = form.get("template");
 
-    if (!companies || !roles || !seniority || !cities || !email || !visa || !file) {
+    if (!companies || !roles || !seniority || !cities || !email || !frequency || !visa || !file) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
       seniority,
       cities: parseCommaList(cities),
       email,
+      frequency,
       visa: visa === "yes",
       templatePath: `uploads/${id}${fileExtension}`,
     } as const;

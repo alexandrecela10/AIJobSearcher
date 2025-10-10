@@ -45,11 +45,45 @@ export default function HomePage() {
       // Convert the server's response from JSON format to JavaScript
       const json = await res.json();
       
-      // Show a success message with the submission ID
-      setMessage(`Saved! Submission ID: ${json.id}`);
+      // Check which button was clicked
+      const action = data.get("action");
       
-      // Clear all the form fields (make them empty again)
-      form.reset();
+      if (action === "automated") {
+        // Automated mode: Process everything in background and email results
+        setMessage("✅ Saved! Processing jobs in background... You'll receive an email when complete.");
+        
+        // Trigger background processing
+        fetch("/api/process-jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ submissionId: json.id })
+        }).catch(err => console.error("Background processing error:", err));
+        
+        // Clear form
+        form.reset();
+        
+      } else {
+        // Manual mode: Go to Step 2
+        setMessage(`✅ Saved! Submission ID: ${json.id}`);
+        
+        // Save to localStorage for manual steps
+        localStorage.setItem("selectedSubmission", JSON.stringify({
+          id: json.id,
+          companies: data.get("companies")?.toString().split(",").map(s => s.trim()),
+          roles: data.get("roles")?.toString().split(",").map(s => s.trim()),
+          seniority: data.get("seniority"),
+          cities: data.get("cities")?.toString().split(",").map(s => s.trim()),
+          email: data.get("email"),
+          frequency: data.get("frequency"),
+          visa: data.get("visa") === "yes",
+          templatePath: `uploads/${json.id}`
+        }));
+        
+        // Redirect to Step 2 after a short delay
+        setTimeout(() => {
+          window.location.href = "/step2";
+        }, 1000);
+      }
       
     } catch (err: any) {
       // If something went wrong, show an error message
@@ -98,6 +132,15 @@ export default function HomePage() {
               <input type="email" name="email" required className="input" placeholder="e.g. your.email@example.com" />
               <p className="mt-1 text-xs text-slate-400">We'll send your job matches and customized CVs here</p>
             </div>
+            <div>
+              <label className="label">Update Frequency</label>
+              <select name="frequency" required className="input">
+                <option value="once">Just Once (No recurring updates)</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+              <p className="mt-1 text-xs text-slate-400">How often should we search for new jobs and send updates?</p>
+            </div>
             <div className="sm:col-span-2">
               <fieldset>
                 <legend className="label">Visa Sponsorship</legend>
@@ -120,14 +163,31 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-x-2">
               <span className="badge">Local Only</span>
-              <span className="badge">Encrypted at rest (optional, later)</span>
+              <span className="badge">AI-Powered</span>
             </div>
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? "Submitting..." : "Save & Continue"}
-            </button>
+            <div className="flex gap-3">
+              <button 
+                type="submit" 
+                name="action"
+                value="manual"
+                className="px-4 py-2 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-800 transition disabled:opacity-50" 
+                disabled={submitting}
+              >
+                {submitting ? "Saving..." : "Manual Steps →"}
+              </button>
+              <button 
+                type="submit" 
+                name="action"
+                value="automated"
+                className="btn-primary" 
+                disabled={submitting}
+              >
+                {submitting ? "Processing..." : "🚀 Auto-Process & Email"}
+              </button>
+            </div>
           </div>
 
           {message && (
