@@ -202,8 +202,12 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
     const expansionJson = expansionResponse?.match(/\{[\s\S]*\}/);
     if (expansionJson) {
       const expansionData = JSON.parse(expansionJson[0]);
-      expandedRoles = expansionData.expandedRoles || expandedRoles;
-      console.log(`✅ Expanded keywords: ${expandedRoles.join(", ")}`);
+      // Add AI-generated roles to original roles (don't replace!)
+      const aiRoles = expansionData.expandedRoles || [];
+      expandedRoles = [...criteria.roles, ...aiRoles];
+      console.log(`✅ Original roles: ${criteria.roles.join(", ")}`);
+      console.log(`✅ AI-generated similar roles: ${aiRoles.join(", ")}`);
+      console.log(`✅ All keywords to search: ${expandedRoles.join(", ")}`);
     }
   } catch (err) {
     console.log("⚠️  Role expansion failed, using original roles");
