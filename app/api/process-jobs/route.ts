@@ -99,7 +99,7 @@ async function expandCompanies(companies: string[], roles: string[]): Promise<st
     const prompt = `Given these companies: ${companies.join(", ")}
 And these target roles: ${roles.join(", ")}
 
-Suggest 10 similar companies that hire for these roles.
+Suggest similar companies that hire for these roles. Return enough to make a total of 10 companies including the original ones.
 
 Return ONLY valid JSON:
 {"companies": ["Company 1", "Company 2", ...]}`;
@@ -118,7 +118,7 @@ Return ONLY valid JSON:
     const jsonMatch = response?.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const data = JSON.parse(jsonMatch[0]);
-      return [...companies, ...data.companies].slice(0, 15); // Original + expanded, max 15
+      return [...companies, ...data.companies].slice(0, 10); // Original + expanded, max 10
     }
   } catch (err) {
     console.log("⚠️  Company expansion failed, using original list");
@@ -273,7 +273,7 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
           const roleMatch = expandedRoles.some(role => {
             const roleLower = role.toLowerCase();
             return titleLower.includes(roleLower) || 
-                   (bodyLower.match(new RegExp(roleLower, 'g')) || []).length >= 3;
+                   (bodyLower.match(new RegExp(roleLower, 'g')) || []).length >= 2;
           });
 
           const isNotJob = titleLower.includes('blog') || titleLower.includes('story') || 

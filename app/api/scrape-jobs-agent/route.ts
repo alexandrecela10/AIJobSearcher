@@ -257,19 +257,19 @@ Return ONLY valid JSON:
             const bodyLower = jobDetails.bodyText.toLowerCase();
             const titleLower = jobDetails.title.toLowerCase();
             
-            // ✅ STRICT ROLE MATCHING: Check if job title contains any of the expanded roles
+            // ✅ ROLE MATCHING: Check if job title contains any of the expanded roles
             const roleMatch = expandedRoles.some(role => {
               const roleLower = role.toLowerCase();
               
-              // Must appear in title (most reliable)
+              // Priority 1: Appears in title (most reliable)
               if (titleLower.includes(roleLower)) {
                 console.log(`     ✅ Role match: "${role}" found in title`);
                 return true;
               }
               
-              // OR appear multiple times in body (indicates it's central to the job)
+              // Priority 2: Appears 2+ times in body (indicates it's central to the job)
               const roleCount = (bodyLower.match(new RegExp(roleLower, 'g')) || []).length;
-              if (roleCount >= 3) {
+              if (roleCount >= 2) {
                 console.log(`     ✅ Role match: "${role}" appears ${roleCount} times in description`);
                 return true;
               }
