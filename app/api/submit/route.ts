@@ -15,10 +15,11 @@ async function ensureDirs() {
 }
 
 function parseCommaList(value: string): string[] {
+  if (!value || value.trim() === "") return [];
   return value
     .split(",")
     .map((s) => s.trim())
-    .filter(Boolean)
+    .filter((s) => s.length > 0)
     .slice(0, 200);
 }
 
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
     const visa = String(form.get("visa") || "");
     const file = form.get("template");
 
-    if (!companies || !roles || !seniority || !cities || !email || !frequency || !visa || !file) {
+    if (!companies || !roles || !email || !frequency || !visa || !file) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 

@@ -118,6 +118,7 @@ export default function HomePage() {
             <div>
               <label className="label">Target Seniority</label>
               <select name="seniority" required className="input">
+                <option value="">Any Level</option>
                 <option value="Junior">Junior</option>
                 <option value="Mid">Mid</option>
                 <option value="Senior">Senior</option>
@@ -127,7 +128,8 @@ export default function HomePage() {
             </div>
             <div>
               <label className="label">Target Cities (comma-separated)</label>
-              <input name="cities" required className="input" placeholder="e.g. London, Paris, NYC" />
+              <input name="cities" className="input" placeholder="e.g. London, Paris, NYC (or leave blank for Any Location)" />
+              <p className="mt-1 text-xs text-slate-400">Leave blank to search all locations</p>
             </div>
             <div>
               <label className="label">Your Email</label>
