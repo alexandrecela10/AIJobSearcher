@@ -12,6 +12,10 @@ export default function HomePage() {
   // It starts as "null" (no message)
   const [message, setMessage] = useState<string | null>(null);
 
+  // "mode" remembers the current mode
+  // It starts as "manual"
+  const [mode, setMode] = useState<"manual" | "automated">("manual");
+
   // 📝 FORM SUBMISSION FUNCTION - This runs when the user clicks "Save & Continue"
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     // Step 1: Stop the page from refreshing (default browser behavior)
@@ -45,14 +49,12 @@ export default function HomePage() {
       // Convert the server's response from JSON format to JavaScript
       const json = await res.json();
       
-      // Check which button was clicked
-      const action = data.get("action");
-      
-      if (action === "automated") {
+      // Check which mode was selected
+      if (mode === "automated") {
         // Automated mode: Process everything in background and email results
-        setMessage("✅ Saved! Processing jobs in background... You'll receive an email when complete.");
+        setMessage("🚀 Job search started! We're processing your request in the background. You'll receive an email at " + data.get("email") + " when we find matching jobs (typically 3-5 minutes).");
         
-        // Trigger background processing
+        // Trigger background processing (don't wait for it)
         fetch("/api/process-jobs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -171,28 +173,32 @@ export default function HomePage() {
             <div className="flex gap-3">
               <button 
                 type="submit" 
-                name="action"
-                value="manual"
+                onClick={() => setMode("manual")}
                 className="px-4 py-2 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-800 transition disabled:opacity-50" 
                 disabled={submitting}
               >
-                {submitting ? "Saving..." : "Manual Steps →"}
+                {submitting && mode === "manual" ? "Saving..." : "Manual Steps →"}
               </button>
               <button 
                 type="submit" 
-                name="action"
-                value="automated"
+                onClick={() => setMode("automated")}
                 className="btn-primary" 
                 disabled={submitting}
               >
-                {submitting ? "Processing..." : "🚀 Auto-Process & Email"}
+                {submitting && mode === "automated" ? "Processing..." : "🚀 Auto-Process & Email"}
               </button>
             </div>
           </div>
 
           {message && (
-            <div className="mt-4 text-sm text-slate-200">
-              {message}
+            <div className={`mt-4 p-4 rounded-lg border ${
+              message.includes("🚀") 
+                ? "bg-green-900/20 border-green-500/30 text-green-300" 
+                : message.includes("✅")
+                ? "bg-blue-900/20 border-blue-500/30 text-blue-300"
+                : "bg-red-900/20 border-red-500/30 text-red-300"
+            }`}>
+              <p className="font-medium">{message}</p>
             </div>
           )}
         </form>
