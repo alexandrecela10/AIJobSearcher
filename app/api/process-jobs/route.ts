@@ -247,10 +247,14 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
 
       await context.close();
 
+      console.log(`    Found ${jobLinks.length} potential job links`);
+      
       // Check each job link
       const matchedJobs = [];
       for (const link of jobLinks.slice(0, 5)) {
         try {
+          console.log(`    → Checking: ${link.text.substring(0, 50)}...`);
+          
           const jobContext = await browser.newContext();
           const jobPage = await jobContext.newPage();
           await jobPage.goto(link.href, { waitUntil: "domcontentloaded", timeout: 10000 });
@@ -270,16 +274,36 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
           const titleLower = jobDetails.title.toLowerCase();
           const bodyLower = jobDetails.bodyText.toLowerCase();
           
+          console.log(`      Title: "${jobDetails.title}"`);
+          console.log(`      Looking for: ${expandedRoles.join(", ")}`);
+          
           const roleMatch = expandedRoles.some(role => {
             const roleLower = role.toLowerCase();
-            return titleLower.includes(roleLower) || 
-                   (bodyLower.match(new RegExp(roleLower, 'g')) || []).length >= 2;
+            const inTitle = titleLower.includes(roleLower);
+            const bodyCount = (bodyLower.match(new RegExp(roleLower, 'g')) || []).length;
+            
+            if (inTitle) {
+              console.log(`      ✅ "${role}" found in title`);
+            } else if (bodyCount >= 2) {
+              console.log(`      ✅ "${role}" appears ${bodyCount} times in body`);
+            }
+            
+            return inTitle || bodyCount >= 2;
           });
 
           const isNotJob = titleLower.includes('blog') || titleLower.includes('story') || 
                           titleLower.includes('meet') || link.href.includes('/blog');
 
+          if (!roleMatch) {
+            console.log(`      ❌ No role match`);
+          }
+          if (isNotJob) {
+            console.log(`      ❌ Excluded: blog/story`);
+          }
+
           if (roleMatch && !isNotJob) {
+            console.log(`      ✅ MATCHED!`);
+            
             // Customize CV for this job
             const customizedCv = await customizeCv(jobDetails, company, templateCv);
             
