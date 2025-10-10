@@ -211,8 +211,8 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
     console.log("⚠️  Could not read template CV");
   }
 
-  // Process each company (limit to first 5 for automated mode)
-  for (const { company, careersUrl } of careersUrls.slice(0, 5)) {
+  // Process each company (limit to first 10 for automated mode)
+  for (const { company, careersUrl } of careersUrls.slice(0, 10)) {
     try {
       console.log(`  Processing ${company}...`);
       
