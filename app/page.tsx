@@ -100,8 +100,8 @@ export default function HomePage() {
   return (
     <main className="container-sleek py-12">
       <header className="mb-10 text-center">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Targeted Job Search</h1>
-        <p className="mt-2 text-slate-300">Enter your search criteria and upload your template CSV to get started.</p>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">JobSearchingRobot</h1>
+        <p className="mt-2 text-slate-300">Enter your search criteria and upload your template CV to get started.</p>
       </header>
 
       <section className="card p-6 sm:p-8">
@@ -117,7 +117,7 @@ export default function HomePage() {
             </div>
             <div>
               <label className="label">Target Seniority</label>
-              <select name="seniority" required className="input">
+              <select name="seniority" className="input">
                 <option value="">Any Level</option>
                 <option value="Junior">Junior</option>
                 <option value="Mid">Mid</option>
