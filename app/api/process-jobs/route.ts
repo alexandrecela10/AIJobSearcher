@@ -182,6 +182,7 @@ async function scrapeJobsAndCustomizeCVs(
   const results = [];
 
   // Generate expanded roles once
+  console.log(`\n🤖 Generating similar role keywords for: ${criteria.roles.join(", ")}`);
   let expandedRoles = [...criteria.roles];
   try {
     const roleExpansionPrompt = `Generate 3 similar role titles for: ${criteria.roles.join(", ")}
@@ -202,9 +203,10 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
     if (expansionJson) {
       const expansionData = JSON.parse(expansionJson[0]);
       expandedRoles = expansionData.expandedRoles || expandedRoles;
+      console.log(`✅ Expanded keywords: ${expandedRoles.join(", ")}`);
     }
   } catch (err) {
-    console.log("⚠️  Role expansion failed");
+    console.log("⚠️  Role expansion failed, using original roles");
   }
 
   // Load template CV
