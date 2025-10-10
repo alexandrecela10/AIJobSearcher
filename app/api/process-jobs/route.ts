@@ -50,6 +50,12 @@ export async function POST(req: Request) {
     console.log(`\n🔍 STEP 3: Finding careers URLs...`);
     const careersUrls = await findCareersUrls(expandedCompanies);
     console.log(`✅ Found ${careersUrls.length} careers URLs`);
+    
+    // Log all identified careers URLs
+    console.log(`\n📋 Identified Careers Websites:`);
+    careersUrls.forEach(({ company, careersUrl, confidence }) => {
+      console.log(`  • ${company}: ${careersUrl} (${confidence} confidence)`);
+    });
 
     // STEP 4: Scrape Jobs and Customize CVs
     console.log(`\n🕷️  STEP 4: Scraping jobs and customizing CVs...`);
@@ -215,6 +221,7 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
   for (const { company, careersUrl } of careersUrls.slice(0, 10)) {
     try {
       console.log(`  Processing ${company}...`);
+      console.log(`    🌐 Visiting: ${careersUrl}`);
       
       const context = await browser.newContext({
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
@@ -254,6 +261,7 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
       for (const link of jobLinks.slice(0, 5)) {
         try {
           console.log(`    → Checking: ${link.text.substring(0, 50)}...`);
+          console.log(`      🌐 Visiting job page: ${link.href}`);
           
           const jobContext = await browser.newContext();
           const jobPage = await jobContext.newPage();
