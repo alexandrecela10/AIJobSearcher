@@ -109,7 +109,10 @@ function generateEmailHtml(
     <div style="margin-bottom: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #6366f1;">
       <h3 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px;">${result.company}</h3>
       <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px;">
-        <a href="${result.careersUrl}" style="color: #6366f1; text-decoration: none;">View Careers Page →</a>
+        ✅ <strong>Verified:</strong> We visited their careers page and found ${result.jobs.length} matching job${result.jobs.length > 1 ? 's' : ''}
+      </p>
+      <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px;">
+        <a href="${result.careersUrl}" style="color: #6366f1; text-decoration: none;">🔗 View Careers Page →</a>
       </p>
       
       ${result.jobs.map(jobData => `
@@ -228,6 +231,7 @@ Visa Sponsorship: ${criteria.visa ? "Required" : "Not required"}
   results.forEach(result => {
     text += `\n${result.company}\n`;
     text += `${"=".repeat(result.company.length)}\n`;
+    text += `✅ Verified: We visited their careers page and found ${result.jobs.length} matching job${result.jobs.length > 1 ? 's' : ''}\n`;
     text += `Careers Page: ${result.careersUrl}\n\n`;
 
     result.jobs.forEach(jobData => {

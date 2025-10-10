@@ -253,21 +253,21 @@ Return ONLY valid JSON:
 
             await jobPage.close();
 
-            // 🎯 STEP 4: STRICT KEYWORD MATCHING with AI-expanded roles
+            // 🎯 STEP 4: KEYWORD MATCHING with AI-expanded roles
             const bodyLower = jobDetails.bodyText.toLowerCase();
             const titleLower = jobDetails.title.toLowerCase();
             
-            // ✅ ROLE MATCHING: Check if job title contains any of the expanded roles
+            // ✅ HARD KEYWORD MATCH: Check if job matches expanded role keywords
             const roleMatch = expandedRoles.some(role => {
               const roleLower = role.toLowerCase();
               
-              // Priority 1: Appears in title (most reliable)
+              // Match if role appears in title
               if (titleLower.includes(roleLower)) {
                 console.log(`     ✅ Role match: "${role}" found in title`);
                 return true;
               }
               
-              // Priority 2: Appears 2+ times in body (indicates it's central to the job)
+              // OR appears 2+ times in body
               const roleCount = (bodyLower.match(new RegExp(roleLower, 'g')) || []).length;
               if (roleCount >= 2) {
                 console.log(`     ✅ Role match: "${role}" appears ${roleCount} times in description`);
