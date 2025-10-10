@@ -9,7 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@types/nodemailer": "^7.0.2",
     "next": "14.2.5",
+    "nodemailer": "^7.0.9",
     "openai": "^4.56.0",
     "playwright": "^1.40.0",
     "react": "18.3.1",

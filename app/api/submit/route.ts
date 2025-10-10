@@ -31,10 +31,11 @@ export async function POST(req: Request) {
     const roles = String(form.get("roles") || "");
     const seniority = String(form.get("seniority") || "");
     const cities = String(form.get("cities") || "");
+    const email = String(form.get("email") || "");
     const visa = String(form.get("visa") || "");
     const file = form.get("template");
 
-    if (!companies || !roles || !seniority || !cities || !visa || !file) {
+    if (!companies || !roles || !seniority || !cities || !email || !visa || !file) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
       roles: parseCommaList(roles),
       seniority,
       cities: parseCommaList(cities),
+      email,
       visa: visa === "yes",
       templatePath: `uploads/${id}${fileExtension}`,
     } as const;

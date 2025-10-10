@@ -94,6 +94,11 @@ export default function HomePage() {
               <input name="cities" required className="input" placeholder="e.g. London, Paris, NYC" />
             </div>
             <div>
+              <label className="label">Your Email</label>
+              <input type="email" name="email" required className="input" placeholder="e.g. your.email@example.com" />
+              <p className="mt-1 text-xs text-slate-400">We'll send your job matches and customized CVs here</p>
+            </div>
+            <div className="sm:col-span-2">
               <fieldset>
                 <legend className="label">Visa Sponsorship</legend>
                 <div className="mt-2 flex gap-4">
