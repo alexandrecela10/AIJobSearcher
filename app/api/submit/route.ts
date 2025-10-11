@@ -41,7 +41,8 @@ export async function POST(req: Request) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
-    if (!(file instanceof File)) {
+    // Check if file is a Blob (File extends Blob)
+    if (!file || typeof file === 'string' || !('arrayBuffer' in file)) {
       return new NextResponse("Invalid file", { status: 400 });
     }
 
