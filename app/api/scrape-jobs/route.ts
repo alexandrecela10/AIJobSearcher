@@ -119,7 +119,6 @@ If no matching jobs are found, return {"hasMatches": false, "jobs": []}`;
           throw new Error("No response from AI");
         }
 
- at 
         let jobsData;
         try {
           // Try to find JSON in the response by looking for { and }
