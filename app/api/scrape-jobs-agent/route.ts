@@ -66,6 +66,7 @@ export async function POST(req: Request) {
     console.log("🚀 Launching headless browser...");
     browser = await chromium.launch({
       headless: true, // Run without UI
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || '/usr/bin/chromium-browser'
     });
 
     const results: CompanyJobResult[] = [];

@@ -63,7 +63,10 @@ export async function POST(req: Request) {
 
     // STEP 4: Scrape Jobs and Customize CVs
     console.log(`\n🕷️  STEP 4: Scraping jobs and customizing CVs...`);
-    browser = await chromium.launch({ headless: true });
+    browser = await chromium.launch({ 
+      headless: true,
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || '/usr/bin/chromium-browser'
+    });
     const jobResults = await scrapeJobsAndCustomizeCVs(
       browser,
       careersUrls,
