@@ -250,9 +250,9 @@ Return ONLY valid JSON:
             // Extract job details from the page
             const jobDetails = await jobPage.evaluate(() => {
               const bodyText = document.body.innerText;
-              const title = document.querySelector('h1')?.innerText || 
-                           document.querySelector('title')?.innerText || 
-                           'Job Position';
+              const h1 = document.querySelector('h1') as HTMLElement | null;
+              const titleEl = document.querySelector('title') as HTMLElement | null;
+              const title = h1?.innerText || titleEl?.innerText || 'Job Position';
               
               return {
                 title: title.trim(),

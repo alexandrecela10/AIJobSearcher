@@ -1,0 +1,62 @@
+#cloud-config
+# Cloud-init script to set up the VM automatically
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose
+  - git
+  - curl
+  - vim
+
+# Create ubuntu user and add to docker group
+users:
+  - name: ubuntu
+    groups: docker
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+
+# Run commands after packages are installed
+runcmd:
+  # Start Docker service
+  - systemctl start docker
+  - systemctl enable docker
+  
+  # Clone repository (replace with your repo)
+  - cd /home/ubuntu
+  - git clone https://github.com/YOUR_USERNAME/job_searcher.git || true
+  
+  # Set permissions
+  - chown -R ubuntu:ubuntu /home/ubuntu/job_searcher
+  
+  # Note: You'll need to manually add .env file and run docker-compose
+  # SSH into the VM and:
+  # 1. cd job_searcher
+  # 2. Create .env file with your secrets
+  # 3. docker-compose up -d
+
+write_files:
+  - path: /home/ubuntu/README.txt
+    content: |
+      JobSearchingRobot VM Setup
+      ==========================
+      
+      Next steps:
+      1. SSH into this VM: ssh ubuntu@<public-ip>
+      2. cd job_searcher
+      3. Create .env file with your secrets:
+         - OPENAI_API_KEY
+         - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+      4. Run: docker-compose up -d
+      5. Access app at: http://<public-ip>:3000
+      
+      Useful commands:
+      - docker-compose logs -f    # View logs
+      - docker-compose restart    # Restart services
+      - docker-compose down       # Stop services
+    owner: ubuntu:ubuntu
+    permissions: '0644'
+
+final_message: "JobSearchingRobot VM is ready! SSH in and complete setup."

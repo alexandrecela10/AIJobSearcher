@@ -1,6 +1,8 @@
-# Job Searcher (Step 1)
+# 🤖 JobSearchingRobot
 
-A Next.js 14 + Tailwind app to collect job search criteria and a template CSV. This is step one of the workflow: sleek form UI + secure CSV upload + local storage.
+An AI-powered job search automation tool that finds, matches, and customizes applications for you.
+
+**Built with:** Next.js 14, TypeScript, OpenAI, Playwright
 
 ## Tech
 
@@ -36,17 +38,135 @@ A Next.js 14 + Tailwind app to collect job search criteria and a template CSV. T
 - CSV files are saved to `uploads/<id>.csv`.
 - Both locations are ignored by Git (`.gitignore`).
 
-## Notes on security & improvements
+---
 
-- Validate the CSV schema (headers/columns) once we finalize the expected template format.
-- Consider encrypting uploads at rest (e.g., using libsodium) and moving storage to a secure bucket with server-managed KMS.
-- Add rate limiting/CSRF protection (Next Middleware or a proxy like Vercel/Netlify edge). For now, this is assumed to be a trusted local environment.
-- Add zod-based validation for stricter type-safe parsing of inputs.
-- Add auth (even simple passcode) before accepting uploads if deployed publicly.
+## 📚 Documentation
 
-## Next steps (following your workflow)
+**All documentation is in the [`docs/`](./docs/) folder:**
 
-- Step 2: Company discovery & deduplication service.
-- Step 3: Careers URL enrichment & scraping strategy.
-- Step 4: Matching logic & CV customization pipeline.
-- Step 5: Results dashboard and export.
+- **[📖 Documentation Index](./docs/README.md)** - Start here!
+- **[⚡ Quick Start](./docs/INFRASTRUCTURE_QUICKSTART.md)** - Choose your deployment path
+
+### **Quick Links:**
+
+| What do you want to do? | Guide |
+|-------------------------|-------|
+| **Deploy quickly (20 min)** | [`docs/deployment/RENDER_DEPLOYMENT.md`](./docs/deployment/RENDER_DEPLOYMENT.md) |
+| **Learn Docker & infrastructure** | [`docs/learning/DOCKER_LEARNING_GUIDE.md`](./docs/learning/DOCKER_LEARNING_GUIDE.md) |
+| **Learn Terraform** | [`docs/learning/TERRAFORM_GUIDE.md`](./docs/learning/TERRAFORM_GUIDE.md) |
+| **Understand job matching** | [`docs/guides/JOB_MATCHING_LOGIC.md`](./docs/guides/JOB_MATCHING_LOGIC.md) |
+| **Implement encryption** | [`docs/deployment/PRIVACY_IMPLEMENTATION.md`](./docs/deployment/PRIVACY_IMPLEMENTATION.md) |
+
+---
+
+## 🚀 Quick Deploy (20 minutes)
+
+### **Option 1: Render (No Credit Card Required)**
+
+```bash
+# 1. Push to GitHub
+git init
+git add -A
+git commit -m "Initial commit"
+git push origin main
+
+# 2. Go to https://render.com
+# 3. Sign up with GitHub
+# 4. New Web Service → Connect repo
+# 5. Add environment variables
+# 6. Deploy!
+```
+
+**Full guide:** [`docs/deployment/RENDER_DEPLOYMENT.md`](./docs/deployment/RENDER_DEPLOYMENT.md)
+
+---
+
+### **Option 2: Local Docker**
+
+```bash
+# 1. Copy environment variables
+cp env.example .env
+# Edit .env with your API keys
+
+# 2. Run with Docker Compose
+docker-compose up -d
+
+# 3. Visit http://localhost:3000
+```
+
+**Full guide:** [`docs/learning/DOCKER_LEARNING_GUIDE.md`](./docs/learning/DOCKER_LEARNING_GUIDE.md)
+
+---
+
+## 🎓 Learning Path
+
+Want to learn infrastructure? Follow this path:
+
+```
+Week 1: Docker basics (2-3 hours)
+   ↓
+Week 2: Docker Compose (1-2 hours)
+   ↓
+Week 3: Terraform (2-3 hours)
+   ↓
+Week 4: Cloud deployment (2-3 hours)
+   ↓
+Week 5: CI/CD automation (1-2 hours)
+```
+
+**Start:** [`docs/INFRASTRUCTURE_QUICKSTART.md`](./docs/INFRASTRUCTURE_QUICKSTART.md)
+
+---
+
+## 🛠️ Environment Variables
+
+Create a `.env` file with:
+
+```bash
+OPENAI_API_KEY=sk-your-key-here
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+```
+
+See [`env.example`](./env.example) for template.
+
+---
+
+## 📖 Features
+
+- ✅ AI-powered job matching (OpenAI)
+- ✅ Automated web scraping (Playwright)
+- ✅ Smart search box detection
+- ✅ Role expansion (finds similar roles)
+- ✅ Email notifications
+- ✅ Manual & automated modes
+- ✅ Docker containerization
+- ✅ Production-ready deployment
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+---
+
+## 📝 License
+
+MIT
+
+---
+
+## 🎉 Next Steps
+
+1. **Read the docs:** [`docs/README.md`](./docs/README.md)
+2. **Choose deployment:** Quick (Render) or Learning (Docker + Terraform)
+3. **Deploy your app**
+4. **Share with friends**
+
+**Happy job hunting!** 🚀

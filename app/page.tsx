@@ -185,10 +185,16 @@ export default function HomePage() {
                 type="submit" 
                 onClick={() => setMode("automated")}
                 className="btn-primary" 
-                disabled={submitting}
+                disabled={submitting || process.env.NODE_ENV === 'production'}
+                title={process.env.NODE_ENV === 'production' ? 'Use Manual Steps for production deployment' : ''}
               >
                 {submitting && mode === "automated" ? "Processing..." : "🚀 Auto-Process & Email"}
               </button>
+              {process.env.NODE_ENV === 'production' && (
+                <p className="text-xs text-yellow-400 mt-1">
+                  ⚠️ Auto-process disabled in production. Use "Manual Steps" instead.
+                </p>
+              )}
             </div>
           </div>
 

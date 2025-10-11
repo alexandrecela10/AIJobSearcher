@@ -335,9 +335,9 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
           await jobPage.waitForTimeout(1000);
 
           const jobDetails = await jobPage.evaluate(() => {
-            const title = document.querySelector('h1')?.innerText || 
-                         document.querySelector('[class*="title"]')?.innerText || 
-                         'Job Position';
+            const h1 = document.querySelector('h1') as HTMLElement | null;
+            const titleEl = document.querySelector('[class*="title"]') as HTMLElement | null;
+            const title = h1?.innerText || titleEl?.innerText || 'Job Position';
             const bodyText = document.body.innerText;
             return { title: title.trim(), bodyText: bodyText.substring(0, 2000) };
           });
