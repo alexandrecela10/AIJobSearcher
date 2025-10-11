@@ -106,6 +106,8 @@ export async function POST(req: Request) {
 // STEP 2: Expand Companies
 async function expandCompanies(companies: string[], roles: string[]): Promise<string[]> {
   try {
+    const openai = getOpenAIClient();
+    
     const prompt = `Given these companies: ${companies.join(", ")}
 And these target roles: ${roles.join(", ")}
 
@@ -139,6 +141,7 @@ Return ONLY valid JSON:
 
 // STEP 3: Find Careers URLs
 async function findCareersUrls(companies: string[]): Promise<Array<{company: string, careersUrl: string, confidence: string}>> {
+  const openai = getOpenAIClient();
   const results = [];
 
   for (const company of companies) {
@@ -183,6 +186,7 @@ async function scrapeJobsAndCustomizeCVs(
   criteria: any,
   templateCvPath: string
 ): Promise<any[]> {
+  const openai = getOpenAIClient();
   const results = [];
 
   // Generate expanded roles once
@@ -423,6 +427,8 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
 // Customize CV for a specific job
 async function customizeCv(jobDetails: any, company: string, templateCv: string): Promise<{cv: string, changes: string[]}> {
   try {
+    const openai = getOpenAIClient();
+    
     const cvPrompt = `Customize this CV for the job.
 
 Job: ${jobDetails.title} at ${company}
