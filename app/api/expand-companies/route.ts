@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization - only create client when API is called
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 interface ExpandCompaniesRequest {
   companies: string[];
@@ -17,6 +20,8 @@ export async function POST(req: Request) {
     if (!process.env.OPENAI_API_KEY) {
       return new NextResponse("OpenAI API key not configured", { status: 500 });
     }
+
+    const openai = getOpenAIClient();
 
     const body: ExpandCompaniesRequest = await req.json();
     const { companies, roles, seniority, cities } = body;

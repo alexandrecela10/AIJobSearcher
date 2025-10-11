@@ -7,9 +7,12 @@ import { chromium } from "playwright";
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max execution time
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization - only create client when API is called
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const SUBMISSIONS_FILE = path.join(DATA_DIR, "submissions.json");
@@ -23,6 +26,7 @@ export async function POST(req: Request) {
   
   try {
     const { submissionId } = await req.json();
+    const openai = getOpenAIClient();
 
     if (!submissionId) {
       return new NextResponse("Missing submissionId", { status: 400 });

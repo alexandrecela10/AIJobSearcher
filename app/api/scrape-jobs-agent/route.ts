@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { chromium } from "playwright";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization - only create client when API is called
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 interface ScrapeJobsRequest {
   careersUrls: Array<{
@@ -45,9 +48,13 @@ export async function POST(req: Request) {
   
   try {
     if (!process.env.OPENAI_API_KEY) {
-      return new NextResponse("OpenAI API key not configured", { status: 500 });
+      return NextResponse.json(
+        { error: "OpenAI API key not configured" },
+        { status: 500 }
+      );
     }
 
+    const openai = getOpenAIClient();
     const body: ScrapeJobsRequest = await req.json();
     const { careersUrls, criteria } = body;
 
