@@ -7,13 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "playwright install chromium"
+    "postinstall": "playwright install chromium",
+    "migrate": "tsx scripts/migrate.ts"
   },
   "dependencies": {
     "@types/nodemailer": "^7.0.2",
     "next": "14.2.5",
     "nodemailer": "^7.0.9",
     "openai": "^4.56.0",
+    "pg": "^8.16.3",
     "playwright": "^1.40.0",
     "react": "18.3.1",
     "react-dom": "18.3.1"
@@ -21,12 +23,14 @@
   "devDependencies": {
     "@tailwindcss/forms": "0.5.7",
     "@types/node": "22.7.5",
+    "@types/pg": "^8.15.5",
     "@types/react": "19.2.0",
     "autoprefixer": "10.4.19",
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.5",
     "postcss": "8.4.41",
     "tailwindcss": "3.4.10",
+    "tsx": "^4.20.6",
     "typescript": "5.5.4"
   }
 }
