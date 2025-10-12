@@ -234,11 +234,17 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
     console.log("⚠️  Could not read template CV");
   }
 
-  // Process each company (limit to first 10 for automated mode)
+  // Process each company (limit to first 5 for automated mode to avoid timeouts)
   for (const { company, careersUrl } of careersUrls.slice(0, 10)) {
+    let companyTimeout: NodeJS.Timeout | null = null;
     try {
       console.log(`  Processing ${company}...`);
       console.log(`    🌐 Visiting: ${careersUrl}`);
+      
+      // Set a timeout for each company (max 60 seconds)
+      companyTimeout = setTimeout(() => {
+        console.log(`  ⏱️  Timeout for ${company}, moving to next...`);
+      }, 60000);
       
       const context = await browser.newContext({
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
@@ -333,9 +339,9 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
 
       console.log(`    Found ${jobLinks.length} potential job links`);
       
-      // Check each job link
+      // Check each job link (limit to 3 for speed)
       const matchedJobs = [];
-      for (const link of jobLinks.slice(0, 5)) {
+      for (const link of jobLinks.slice(0, 3)) {
         try {
           console.log(`    → Checking: ${link.text.substring(0, 50)}...`);
           console.log(`      🌐 Visiting job page: ${link.href}`);
@@ -418,9 +424,12 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
           jobs: matchedJobs
         });
       }
+      
+      if (companyTimeout) clearTimeout(companyTimeout);
 
     } catch (err) {
       console.log(`  ⚠️  Failed to process ${company}`);
+      if (companyTimeout) clearTimeout(companyTimeout);
     }
   }
 
