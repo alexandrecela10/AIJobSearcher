@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import OpenAI from "openai";
 import { chromium } from "playwright";
+import { query } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max execution time
@@ -13,9 +14,6 @@ function getOpenAIClient() {
     apiKey: process.env.OPENAI_API_KEY,
   });
 }
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const SUBMISSIONS_FILE = path.join(DATA_DIR, "submissions.json");
 
 /**
  * This API combines Steps 2, 3, and 4 into one automated background process
@@ -34,14 +32,17 @@ export async function POST(req: Request) {
 
     console.log(`\n🚀 Starting automated job processing for submission: ${submissionId}`);
 
-    // Load submission data
-    const submissionsData = await readFile(SUBMISSIONS_FILE, "utf-8");
-    const submissions = JSON.parse(submissionsData);
-    const submission = submissions.find((s: any) => s.id === submissionId);
+    // Load submission from database
+    const result = await query(
+      'SELECT * FROM submissions WHERE id = $1',
+      [submissionId]
+    );
 
-    if (!submission) {
+    if (result.rows.length === 0) {
       return new NextResponse("Submission not found", { status: 404 });
     }
+
+    const submission = result.rows[0];
 
     console.log(`📋 Loaded submission for ${submission.email}`);
 
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
         cities: submission.cities,
         visa: submission.visa
       },
-      submission.templatePath
+      submission.template_path
     );
     await browser.close();
     console.log(`✅ Found ${jobResults.filter((r: any) => r.status === "success").length} companies with matches`);

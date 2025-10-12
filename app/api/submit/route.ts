@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
-import { mkdir, writeFile, readFile } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import { randomUUID } from "crypto";
 import path from "path";
+import { query } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-const DATA_DIR = path.join(process.cwd(), "data");
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
-const SUBMISSIONS_FILE = path.join(DATA_DIR, "submissions.json");
 
 async function ensureDirs() {
-  await mkdir(DATA_DIR, { recursive: true });
   await mkdir(UPLOAD_DIR, { recursive: true });
 }
 
@@ -67,29 +65,26 @@ export async function POST(req: Request) {
 
     await writeFile(uploadPath, Buffer.from(arrayBuffer));
 
-    const submission = {
-      id,
-      createdAt: new Date().toISOString(),
-      companies: parseCommaList(companies),
-      roles: parseCommaList(roles),
-      seniority,
-      cities: parseCommaList(cities),
-      email,
-      frequency,
-      visa: visa === "yes",
-      templatePath: `uploads/${id}${fileExtension}`,
-    } as const;
+    // Save to PostgreSQL database
+    await query(
+      `INSERT INTO submissions (
+        id, email, companies, roles, seniority, cities, visa, frequency, template_path, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
+        id,
+        email,
+        parseCommaList(companies),
+        parseCommaList(roles),
+        seniority,
+        parseCommaList(cities),
+        visa === "yes",
+        frequency,
+        `uploads/${id}${fileExtension}`,
+        'pending'
+      ]
+    );
 
-    // Persist
-    let existing: any[] = [];
-    try {
-      const buf = await readFile(SUBMISSIONS_FILE);
-      existing = JSON.parse(buf.toString());
-      if (!Array.isArray(existing)) existing = [];
-    } catch {}
-
-    existing.push(submission);
-    await writeFile(SUBMISSIONS_FILE, JSON.stringify(existing, null, 2));
+    console.log(`✅ Submission ${id} saved to database`);
 
     return NextResponse.json({ id });
   } catch (err: any) {
