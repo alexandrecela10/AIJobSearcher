@@ -235,7 +235,7 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
   }
 
   // Process each company (limit to first 5 for automated mode to avoid timeouts)
-  for (const { company, careersUrl } of careersUrls.slice(0, 10)) {
+  for (const { company, careersUrl } of careersUrls.slice(0, 5)) {
     let companyTimeout: NodeJS.Timeout | null = null;
     try {
       console.log(`  Processing ${company}...`);
@@ -487,7 +487,10 @@ Return ONLY valid JSON:
 // Send email with results
 async function sendEmail(email: string, submission: any, results: any[]): Promise<void> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/send-email`, {
+    // Use internal URL for server-side calls
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                    (process.env.NODE_ENV === 'production' ? 'https://job-searcher.fly.dev' : 'http://localhost:3000');
+    const response = await fetch(`${baseUrl}/api/send-email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
