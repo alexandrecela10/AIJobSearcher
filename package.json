@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "playwright install chromium",
-    "migrate": "tsx scripts/migrate.ts"
+    "migrate": "tsx scripts/migrate.ts",
+    "check-db": "tsx scripts/check-db.ts"
   },
   "dependencies": {
     "@types/nodemailer": "^7.0.2",
