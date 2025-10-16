@@ -340,6 +340,20 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
 
       console.log(`    Found ${jobLinks.length} potential job links`);
       
+      // If no job links found, skip this company
+      if (jobLinks.length === 0) {
+        console.log(`    ⚠️  No job links found on this page, skipping ${company}`);
+        if (companyTimeout) clearTimeout(companyTimeout);
+        results.push({
+          company,
+          careersUrl,
+          status: "no_matches",
+          message: "No job listings found on careers page",
+          jobs: []
+        });
+        continue;
+      }
+      
       // Check each job link (limit to 3 for speed)
       const matchedJobs = [];
       for (const link of jobLinks.slice(0, 3)) {
