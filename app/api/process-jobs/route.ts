@@ -356,8 +356,17 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
             const h1 = document.querySelector('h1') as HTMLElement | null;
             const titleEl = document.querySelector('[class*="title"]') as HTMLElement | null;
             const title = h1?.innerText || titleEl?.innerText || 'Job Position';
+            
+            // Try to find location
+            const locationEl = document.querySelector('[class*="location"]') as HTMLElement | null;
+            const locationText = locationEl?.innerText || '';
+            
             const bodyText = document.body.innerText;
-            return { title: title.trim(), bodyText: bodyText.substring(0, 2000) };
+            return { 
+              title: title.trim(), 
+              location: locationText.trim(),
+              bodyText: bodyText.substring(0, 3000) // Increased for better analysis
+            };
           });
 
           await jobContext.close();
@@ -386,6 +395,24 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
           const isNotJob = titleLower.includes('blog') || titleLower.includes('story') || 
                           titleLower.includes('meet') || link.href.includes('/blog');
 
+          // Check city match (if cities specified)
+          let cityMatch = true;
+          if (criteria.cities && criteria.cities.length > 0) {
+            const locationLower = (jobDetails.location + ' ' + bodyLower).toLowerCase();
+            cityMatch = criteria.cities.some(city => {
+              const cityLower = city.toLowerCase();
+              const found = locationLower.includes(cityLower);
+              if (found) {
+                console.log(`      ✅ City "${city}" found in location`);
+              }
+              return found;
+            });
+            
+            if (!cityMatch) {
+              console.log(`      ❌ Location "${jobDetails.location}" doesn't match requested cities: ${criteria.cities.join(", ")}`);
+            }
+          }
+
           if (!roleMatch) {
             console.log(`      ❌ No role match`);
           }
@@ -393,7 +420,7 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
             console.log(`      ❌ Excluded: blog/story`);
           }
 
-          if (roleMatch && !isNotJob) {
+          if (roleMatch && !isNotJob && cityMatch) {
             console.log(`      ✅ MATCHED!`);
             
             // Customize CV for this job
@@ -402,12 +429,16 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
             matchedJobs.push({
               job: {
                 title: jobDetails.title,
-                location: criteria.cities[0] || "Location not specified",
+                location: jobDetails.location || "Location not specified",
                 description: jobDetails.bodyText.substring(0, 200) + '...',
                 url: link.href
               },
               customizedCv: customizedCv.cv,
-              cvChanges: customizedCv.changes
+              cvChanges: customizedCv.changes,
+              cvIssues: customizedCv.cvIssues,
+              recommendations: customizedCv.recommendations,
+              seniorityInfo: customizedCv.seniorityInfo,
+              visaInfo: customizedCv.visaInfo
             });
 
             if (matchedJobs.length >= 2) break; // Max 2 jobs per company
@@ -437,33 +468,50 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
   return results;
 }
 
-// Customize CV for a specific job
-async function customizeCv(jobDetails: any, company: string, templateCv: string): Promise<{cv: string, changes: string[]}> {
+// Analyze CV and customize for a specific job
+async function customizeCv(jobDetails: any, company: string, templateCv: string): Promise<{
+  cv: string, 
+  changes: string[], 
+  cvIssues: string[], 
+  recommendations: string[],
+  seniorityInfo: string,
+  visaInfo: string
+}> {
   try {
     const openai = getOpenAIClient();
     
-    const cvPrompt = `Customize this CV for the job.
+    const analysisPrompt = `Analyze this CV for a job application and extract job requirements.
 
 Job: ${jobDetails.title} at ${company}
-Description: ${jobDetails.bodyText.substring(0, 500)}
+Job Description: ${jobDetails.bodyText.substring(0, 1000)}
 
 Original CV:
 ${templateCv.substring(0, 1500)}
 
+Analyze and return ONLY valid JSON with:
+1. CV issues (what's missing or weak)
+2. Improvement recommendations
+3. Seniority level from job description (years of experience, "Senior", "Junior", "Lead", etc.)
+4. Visa sponsorship info from job description (does it mention visa/sponsorship/work permit?)
+
 Return ONLY valid JSON:
 {
-  "customizedCv": "Full customized CV text",
-  "changes": ["change 1", "change 2", "change 3"]
+  "cvIssues": ["issue 1", "issue 2", "issue 3"],
+  "recommendations": ["recommendation 1", "recommendation 2", "recommendation 3"],
+  "customizedCv": "Full customized CV text with improvements applied",
+  "changes": ["change 1 made to CV", "change 2 made to CV"],
+  "seniorityInfo": "e.g., '5+ years experience required' or 'Senior level (7-10 years)' or 'Entry level' or 'Not specified'",
+  "visaInfo": "e.g., 'Visa sponsorship available' or 'Must have right to work' or 'Unsure - not mentioned'"
 }`;
 
     const cvCompletion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are a CV writer. Return only valid JSON." },
-        { role: "user", content: cvPrompt }
+        { role: "system", content: "You are an expert CV analyst and career advisor. Return only valid JSON." },
+        { role: "user", content: analysisPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 2000,
+      max_tokens: 2500,
     });
 
     const cvResponse = cvCompletion.choices[0]?.message?.content?.trim();
@@ -471,17 +519,25 @@ Return ONLY valid JSON:
     if (jsonMatch) {
       const cvData = JSON.parse(jsonMatch[0]);
       return {
-        cv: cvData.customizedCv,
-        changes: cvData.changes
+        cv: cvData.customizedCv || templateCv,
+        changes: cvData.changes || [],
+        cvIssues: cvData.cvIssues || [],
+        recommendations: cvData.recommendations || [],
+        seniorityInfo: cvData.seniorityInfo || "Not specified",
+        visaInfo: cvData.visaInfo || "Unsure - not mentioned"
       };
     }
   } catch (err) {
-    console.log("⚠️  CV customization failed");
+    console.log("⚠️  CV customization failed:", err);
   }
 
   return {
-    cv: `Experienced professional seeking ${jobDetails.title} role at ${company}`,
-    changes: ["Tailored for role", "Highlighted relevant skills"]
+    cv: templateCv,
+    changes: ["Unable to customize - using original CV"],
+    cvIssues: ["Analysis unavailable"],
+    recommendations: ["Please review manually"],
+    seniorityInfo: "Not specified",
+    visaInfo: "Unsure - not mentioned"
   };
 }
 

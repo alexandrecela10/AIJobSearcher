@@ -17,6 +17,10 @@ interface JobResult {
     };
     customizedCv: string;
     cvChanges: string[];
+    cvIssues: string[];
+    recommendations: string[];
+    seniorityInfo: string;
+    visaInfo: string;
   }>;
 }
 
@@ -131,16 +135,54 @@ function generateEmailHtml(
             View Job →
           </a>
           
+          <!-- Job Requirements -->
+          <div style="margin-top: 15px; padding: 15px; background-color: #fef3c7; border-radius: 6px; border-left: 3px solid #f59e0b;">
+            <h5 style="margin: 0 0 10px 0; color: #92400e; font-size: 14px; font-weight: 600;">
+              📊 Job Requirements Analysis
+            </h5>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 4px 0; color: #78350f; font-size: 13px; width: 40%;">Seniority Level:</td>
+                <td style="padding: 4px 0; color: #92400e; font-size: 13px; font-weight: 600;">${jobData.seniorityInfo || 'Not specified'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; color: #78350f; font-size: 13px;">Visa Sponsorship:</td>
+                <td style="padding: 4px 0; color: #92400e; font-size: 13px; font-weight: 600;">${jobData.visaInfo || 'Unsure - not mentioned'}</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- CV Analysis -->
+          <div style="margin-top: 15px; padding: 15px; background-color: #fee2e2; border-radius: 6px; border-left: 3px solid #ef4444;">
+            <h5 style="margin: 0 0 10px 0; color: #991b1b; font-size: 14px; font-weight: 600;">
+              ⚠️ CV Issues Identified
+            </h5>
+            <ul style="margin: 5px 0 0 0; padding-left: 20px; color: #7f1d1d; font-size: 13px;">
+              ${(jobData.cvIssues || ['No issues identified']).map(issue => `<li>${issue}</li>`).join('')}
+            </ul>
+          </div>
+
+          <!-- Recommendations -->
+          <div style="margin-top: 15px; padding: 15px; background-color: #dbeafe; border-radius: 6px; border-left: 3px solid #3b82f6;">
+            <h5 style="margin: 0 0 10px 0; color: #1e40af; font-size: 14px; font-weight: 600;">
+              💡 Improvement Recommendations
+            </h5>
+            <ul style="margin: 5px 0 0 0; padding-left: 20px; color: #1e3a8a; font-size: 13px;">
+              ${(jobData.recommendations || ['No recommendations']).map(rec => `<li>${rec}</li>`).join('')}
+            </ul>
+          </div>
+
+          <!-- Customized CV -->
           <div style="margin-top: 15px; padding: 15px; background-color: #f1f5f9; border-radius: 6px;">
             <h5 style="margin: 0 0 10px 0; color: #334155; font-size: 14px; font-weight: 600;">
               ✨ Customized CV for this role:
             </h5>
-            <div style="margin: 0 0 10px 0; color: #475569; font-size: 13px; white-space: pre-wrap; font-family: 'Courier New', monospace; background-color: white; padding: 10px; border-radius: 4px; border: 1px solid #e2e8f0;">
+            <div style="margin: 0 0 10px 0; color: #475569; font-size: 13px; white-space: pre-wrap; font-family: 'Courier New', monospace; background-color: white; padding: 10px; border-radius: 4px; border: 1px solid #e2e8f0; max-height: 300px; overflow-y: auto;">
 ${jobData.customizedCv}
             </div>
-            <p style="margin: 0; color: #64748b; font-size: 12px; font-weight: 600;">Key Changes:</p>
+            <p style="margin: 0; color: #64748b; font-size: 12px; font-weight: 600;">Changes Applied:</p>
             <ul style="margin: 5px 0 0 0; padding-left: 20px; color: #64748b; font-size: 12px;">
-              ${jobData.cvChanges.map(change => `<li>${change}</li>`).join('')}
+              ${(jobData.cvChanges || ['No changes']).map(change => `<li>${change}</li>`).join('')}
             </ul>
           </div>
         </div>
