@@ -399,7 +399,7 @@ Return ONLY valid JSON: {"expandedRoles": ["role1", "role2", ...]}`;
           let cityMatch = true;
           if (criteria.cities && criteria.cities.length > 0) {
             const locationLower = (jobDetails.location + ' ' + bodyLower).toLowerCase();
-            cityMatch = criteria.cities.some(city => {
+            cityMatch = criteria.cities.some((city: string) => {
               const cityLower = city.toLowerCase();
               const found = locationLower.includes(cityLower);
               if (found) {
