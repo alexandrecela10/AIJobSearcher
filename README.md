@@ -3,7 +3,7 @@
 ## Context: 
 This is me speaking. Gemini will speak in below sections. I am tinkering with vibe coding for fun and also to improve and develop good propotype software engineering skils. My aim is, whenever I have an idea for a new solution solving a client's problem, I can test it out in the market fast, and get out of 'in theory' land. To deploy demonstrated value, and fast
 
-This software is also going to the first out of a 'AI for my girlfriend' series where I build AI that makes my princess life easier, and will maybe make her realise Data and AI are not that boring
+This software is also going to the first out of a 'AI for my girlfriend' series where I build AI that makes my princess life easier, and will maybe make her realise that Data and AI are not that boring
 
 ## Value Proposition
 > **Automate your job search:** AI-powered tool that finds matching jobs across multiple companies, analyzes your CV, extracts job requirements, and customizes your application—all while you sleep.
